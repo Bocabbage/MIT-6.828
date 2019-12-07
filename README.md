@@ -2,13 +2,13 @@
 
 
 
-- 用于存放 [MIT6.828: Fall 2018](https://pdos.csail.mit.edu/6.828/2018/schedule.html) 课程Homework与Labs内容
+-  [MIT6.828: Fall 2018](https://pdos.csail.mit.edu/6.828/2018/schedule.html) 课程Homework与Labs内容
 
 - 课程参考讲义(xv6)：[xv6-handbook](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
 
 
 
-### 0.环境搭建
+### 环境搭建
 
 - 实验环境：Windows10 WSL2 (Ubuntu 16.04)
 
@@ -54,4 +54,16 @@
   ###########################
   ```
 
-  
+
+
+
+### 进度
+
+- **Lab**
+  * [x] Lab1: Booting a PC
+  * [ ] Lab2: Memory Management
+  * [ ] Lab3: User-Level Environments
+  * [ ] Lab4: Preemptive Multitasking
+  * [ ] Lab5: File system, spawn, and sh
+  * [ ] *Lab6: Networking
+  * [ ] *Lab7: Final project
