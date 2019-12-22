@@ -32,6 +32,8 @@
 
 ## Part 2: The Boot Loader
 
+Boot Loader是位于系统所在盘的Boot Sector中的一段程序，用于将kernel加载到内存中，并将控制权转交。
+
 本次实验中使用的Boot Loader源码由两部分组成：`boot/boot.S`，`boot/main.c`
 
 程序流程：
@@ -51,7 +53,7 @@
 
 - **main.c （Loading the Kernel）**
 
-  JOS-kernel是以**ELF(Executable and Linkable File)**形式存在的，这段源码的目的是将这段内核加载到内存中。整个流程分为两步：
+  JOS-kernel是以**ELF**(Executable and Linkable File)形式存在的，这段源码的目的是将这段内核加载到内存中。整个流程分为两步：
 
   - 调用`readseg`函数从磁盘上加载内容至内存
   - 调用`stosb`将segment-registers设置为0
@@ -102,7 +104,7 @@
 
 ​	查看kernel的反汇编文件`kern/kernel.asm`可以发现，其链接完成后的入口地址为`0xf010000`（位于地址空间高处），而实际上我们有时会在物理内存较小的PC上运行这个OS，这时我们需要通过映射将高位地址映射到低位的物理地址。
 
-​	根据`boot.S`的内容我们知道，此时我们仍使用物理地址（或者说与物理地址完全相同的Linear Address），而Lab的说明告诉我们：`entrypgdir.c`构建从高位到低位的映射后，运行`movl %eax, %cr0`，映射:
+​	根据`boot.S`的内容我们知道，此时我们仍使用物理地址（或者说与物理地址完全相同的线性地址），而Lab的说明告诉我们：`entrypgdir.c`构建从高位到低位的映射后，运行`movl %eax, %cr0`，映射:
 
 `(0xf0000000,0xf0400000)` --> `(0x00000000,0x00400000)`，
 

@@ -61,7 +61,7 @@
 
 - **Lab**
   * [x] Lab1: Booting a PC
-  * [ ] Lab2: Memory Management
+  * [x] Lab2: Memory Management
   * [ ] Lab3: User-Level Environments
   * [ ] Lab4: Preemptive Multitasking
   * [ ] Lab5: File system, spawn, and sh
