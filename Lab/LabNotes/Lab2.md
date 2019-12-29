@@ -55,7 +55,7 @@
     
     	if(PADDR(nextfree) >= (npages * PGSIZE))
     		// Here used macro 'PADDR' to get the physic address
-  		panic("boot alloc: out of memory.\n");
+  			panic("boot alloc: out of memory.\n");
     	return result;
   }
     ```
