@@ -67,7 +67,7 @@
     这个函数是整个 `kern/pmap.c` 的功能核心，完整分析在后面进行。补充的代码段如下：
   
   ```c
-    pages = (struct PageInfo*) boot_alloc(npages*sizeof(struct PageInfo));
+  pages = (struct PageInfo*) boot_alloc(npages*sizeof(struct PageInfo));
   memset(pages,0,npages*sizeof(struct PageInfo));
   ```
 
