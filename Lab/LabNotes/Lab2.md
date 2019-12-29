@@ -2,7 +2,7 @@
 
 - Lab:  https://pdos.csail.mit.edu/6.828/2018/labs/lab2/ 
 
-  ​	这个实验的主要工作其实就是构建JOS的*Virtual Memory System*。在Lab1中，我们使用 `entrypgdir.c` 将高位的4MB映射到了低位的4MB物理地址空间中，这其实就是简单的小虚拟内存系统了。Lab2要做的事情是在这4MB地址空间中完成一个二级页表的*Virtual Memory System*，并通过`lcr/rcr` 指令将其设置为JOS的内存系统。
+  ​	这个实验的主要工作其实就是开始构建JOS的*Virtual Memory System*，完成*Kernel Address Space*的映射。在Lab1中，我们使用 `entrypgdir.c` 将高位的4MB映射到了低位的4MB物理地址空间中，这其实就是简单的小虚拟内存系统了。Lab2要做的事情是在这4MB地址空间中完成一个二级页表的*Virtual Memory System*，并通过`lcr/rcr` 指令将其设置为JOS的内存系统。
 
   
 
@@ -69,7 +69,7 @@
   ```c
     pages = (struct PageInfo*) boot_alloc(npages*sizeof(struct PageInfo));
   memset(pages,0,npages*sizeof(struct PageInfo));
-    ```
+  ```
 
     
 
@@ -141,28 +141,30 @@
     		memset(page2kva(result),0,PGSIZE);
   	return result;
     }
-  ```
-  
-    ​	这里需要特别指出的是 `page2kva` 函数在这里的应用。从函数原型我们也可以猜到这是根据以 `PageInfo` 指针作为输入得到与该Node对应的页的物理地址。我们进入 `pamp.h` 并展开该函数的调用：
-  
+    ```
+    
+    这里需要特别指出的是 `page2kva` 函数在这里的应用。从函数原型我们也可以猜到这是根据以 `PageInfo` 指针作为输入得到与该Node对应的页的物理地址。我们进入 `pamp.h` 并展开该函数的调用：
+    
     ```c
     /*
-    ORIGINAL CALL:
-    	static inline void*
-        page2kva(struct PageInfo *pp)
-        {
-            return KADDR(page2pa(pp));
-        }
+      ORIGINAL CALL:
+      	static inline void*
+          page2kva(struct PageInfo *pp)
+          {
+              return KADDR(page2pa(pp));
+          }
     */
     static inline void*
-    page2kva(struct PageInfo *pp)
+        page2kva(struct PageInfo *pp)
     {
         // pages: the global static array of PageInfos
-      // PGSHIFT: 12 = log2(PGSIZE)
+        // PGSHIFT: 12 = log2(PGSIZE)
         // KERNBASE: 0xF0000000 (kernel's base address)
         return ((pp - pages) << PGSHIFT) + KERNsBASE);
     }
     ```
+    
+    
   
     ​	展开后我们就可以很清楚地看到 `PageInfo Node` 是怎么跟物理页联系的了：`pages` 中Node的index（或者说offset）与其对应的物理页的offset是相同的，对应映射一个PGSIZE的地址段作为页。
   
