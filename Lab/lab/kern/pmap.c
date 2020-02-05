@@ -105,7 +105,7 @@ boot_alloc(uint32_t n)
 	result = nextfree;
 	nextfree = ROUNDUP(nextfree + n, PGSIZE);
 
-	if(PADDR(nextfree) >= (npages * PGSIZE))
+	if(PADDR(nextfree) >= 0x40000 || nextfree < result)
 		// Here used macro 'PADDR' to get the physic address
 		panic("boot alloc: out of memory.\n");
 	return result;
@@ -277,6 +277,21 @@ page_init(void)
 	}
 	// for situation(3)
 	/*
+
+	PC's physical address space:
+
+		...
+	
+	------------ <- 0x100000
+	| BIOS ROM |
+	------------
+	| expand R | 	I/O Hole
+	------------
+	|    VGA   |
+	------------ <- 0x0A0000
+	|  Low Mem |
+	------------ <- 0x000000
+
 	where the '96' comes from:
 		(EXTPHYSMEM - IOPHYSMEM) / PGSIZE
 	  = (0x100000   - 0x0A0000 ) / 0x1000

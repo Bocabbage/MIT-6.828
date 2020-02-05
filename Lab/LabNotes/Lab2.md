@@ -8,7 +8,7 @@
 
 ## Part 1: Physical Page Management
 
-​	本节的内容是完成Physic Page Allocator部分的代码。
+​	本节的内容是完成Physic Page Allocator部分的代码，也即**构建物理内存管理的monitor**。
 
 ​	JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granularity*），核心的数据结构是`struct PageInfo` ：一个List-Node like的单元，用于记录某个page是否被使用，并在`kern/pmap.h` 中实现了一些宏，用于根据一个该类型对象找到对应的page，或根据page的物理地址找到对应的node。
 
@@ -53,11 +53,11 @@
     	result = nextfree;
     	nextfree = ROUNDUP(nextfree + n, PGSIZE);
     
-    	if(PADDR(nextfree) >= (npages * PGSIZE))
+    	if(PADDR(nextfree) >= 0x40000 || nextfree < result)
     		// Here used macro 'PADDR' to get the physic address
-  			panic("boot alloc: out of memory.\n");
+    		panic("boot alloc: out of memory.\n");
     	return result;
-  }
+    }
     ```
 
     
@@ -65,20 +65,22 @@
   - **mem_init** (实现到 `check_page_free_list(1)` 前)
   
     这个函数是整个 `kern/pmap.c` 的功能核心，完整分析在后面进行。补充的代码段如下：
-  
-  ```c
-  pages = (struct PageInfo*) boot_alloc(npages*sizeof(struct PageInfo));
-  memset(pages,0,npages*sizeof(struct PageInfo));
-  ```
-
     
+    ```c
+    pages = (struct PageInfo*) boot_alloc(npages*sizeof(struct PageInfo));
+    memset(pages,0,npages*sizeof(struct PageInfo));
+    ```
+  
+    这段代码在4MB的已映射区域内分配了一个PageInfo数组，它将被用来追踪物理页的情况。此时先将所有记录初始化为0。
 
+  
+  
   - **page_init**
   
   ​	完成VM分页功能启动的初始化：将所有页的Info放入 `page_free_list` 中备用（相当于初始化该List）。实际工作要稍微复杂些，主要因为有一些特殊情况：
   
   - 第一个page不被使用；
-    - 在 `[IOPHYSMEM,EXTPHYSMEM)` 地址段的内存是为IO准备的（`IO hole`），这段的pages也不被使用。
+    - 在 `[IOPHYSMEM,EXTPHYSMEM)` 地址段的内存是为IO准备的（*IO Hole*），这段的pages也不被使用。
   
     综合上述情况，pageInfo的初始化应当分段进行。代码如下：
   
@@ -117,11 +119,11 @@
     		pages[i].pp_link = page_free_list;
   		page_free_list = &pages[i];
     	}	
-  }
+}
     ```
 
     
-
+  
   - **page_alloc （pages分配功能核心）**
   
     ​	如前文所述，这个函数是VM系统初始化完成后真正的allocator。其工作是查找 `page_free_list`（即记录空闲页的List like structure，Node即为 `PageInfo` ），取出一个page分配给调用者。
