@@ -103,12 +103,27 @@
     	}
     	// for situation(3)
     	/*
-    	where the '96' comes from:
-    		(EXTPHYSMEM - IOPHYSMEM) / PGSIZE
-    	  = (0x100000   - 0x0A0000 ) / 0x1000
-    	  =  0x6 = (DEC)96
     
-    	*/
+    	PC's physical address space:
+    
+    		...
+    	
+    	------------ <- 0x100000
+    	| BIOS ROM |
+    	------------
+    	| expand R | 	I/O Hole
+    	------------
+    	|    VGA   |
+    	------------ <- 0x0A0000
+    	|  Low Mem |
+    	------------ <- 0x000000
+  	
+    	where the '96' comes from:
+		(EXTPHYSMEM - IOPHYSMEM) / PGSIZE
+    	  = (0x100000   - 0x0A0000 ) / 0x1000
+	  =  0x6 = (DEC)96
+    
+  	*/
     	const size_t pages_in_use_end = npages_basemem + 96 + (PADDR(boot_alloc(0))) / PGSIZE;
     	for(; i < pages_in_use_end; ++i)
     		pages[i].pp_ref = 1;
@@ -117,13 +132,13 @@
     	{
     		pages[i].pp_ref = 0;
     		pages[i].pp_link = page_free_list;
-  		page_free_list = &pages[i];
+    	page_free_list = &pages[i];
     	}	
-}
+    }
     ```
-
     
-  
+    
+    
   - **page_alloc （pages分配功能核心）**
   
     ​	如前文所述，这个函数是VM系统初始化完成后真正的allocator。其工作是查找 `page_free_list`（即记录空闲页的List like structure，Node即为 `PageInfo` ），取出一个page分配给调用者。
@@ -247,6 +262,8 @@
 
     通过一级页表和给定的*Virtual Address*返回*PTE*的函数。
 
+    **（注：Page-Directory中的Page Address都为Physical Address）**
+  
     ```c
     pte_t *
     pgdir_walk(pde_t *pgdir, const void *va, int create)
@@ -268,17 +285,18 @@
     			*pde = (page2pa(new_p) | PTE_P | PTE_W | PTE_U);
     		}
     	}
-    
-    	return (pte_t*)(KADDR(PTE_ADDR(*pde))) + PTX(va);
+    	
+        // The page-addresses in Page-Directory are 'physical address'
+  	return (pte_t*)(KADDR(PTE_ADDR(*pde))) + PTX(va);
     }
-    ```
-
-    
-
-  - **boot_map_region**
-
+  ```
+  
+  
+  
+- **boot_map_region**
+  
     ​	被 `mem_init` 调用，用于实现*Virtual Address*到*Physical Address*的映射。
-
+  
     ```c
     static void
     boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
@@ -297,16 +315,16 @@
     		pte = pgdir_walk(pgdir,(void*)va, 1);
     		*pte = (pa | perm | PTE_P);
     	}
-    
+  
     }
-    ```
-
-    
-
-  - **page_lookup**
-
+  ```
+  
+  
+  
+- **page_lookup**
+  
     ​	通过一级页表和*Virtual Address*找到对应页的 `PageInfo` 节点。
-
+  
     ```c
     struct PageInfo *
     page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
@@ -317,16 +335,16 @@
     		return NULL;
     	if(pte_store != NULL)
     		*pte_store = pte;
-    	return pa2page(PTE_ADDR(*pte));
+  	return pa2page(PTE_ADDR(*pte));
     }
-    ```
-
-    
-
-  - **page_remove / page_insert**
-
+  ```
+  
+  
+  
+- **page_remove / page_insert**
+  
     用于建立/删除一个页与一个*Virtual Address*间的映射。
-
+  
     ```c
     void
     page_remove(pde_t *pgdir, void *va)
@@ -355,10 +373,10 @@
     	if( *now_pte & PTE_P)
     		page_remove(pgdir, va);
     	*now_pte = (page2pa(pp) | perm | PTE_P);
-    	return 0;
+  	return 0;
     }
     ```
-
+  
     
 
 
