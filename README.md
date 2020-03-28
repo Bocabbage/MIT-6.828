@@ -67,3 +67,8 @@
   * [ ] Lab5: File system, spawn, and sh
   * [ ] *Lab6: Networking
   * [ ] *Lab7: Final project
+
+- **Homework**
+  * [x] HW1: Boot xv6
+  * [ ] HW2: Shell
+
