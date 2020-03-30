@@ -1,5 +1,5 @@
 /*
-    Modified date: 2020/3/29 -- haven't been tested
+    Modified date: 2020/3/30
 */
 #include <stdlib.h>
 #include <unistd.h>
@@ -57,7 +57,8 @@ runcmd(struct cmd *cmd)
 
   if(cmd == 0)
     _exit(0);
-  
+
+
   switch(cmd->type){
   default:
     fprintf(stderr, "unknown runcmd\n");
@@ -75,7 +76,7 @@ runcmd(struct cmd *cmd)
     if(!strcmp(ecmd->argv[0], "ls"))
     {
       int n;
-      struct dirent *namelist;
+      struct dirent **namelist;
 
       if(ecmd->argv[1] == 0)
         n = scandir(".", &namelist, NULL, alphasort);
@@ -84,34 +85,36 @@ runcmd(struct cmd *cmd)
 
       if(n<0)
       {
-        fprintf(stderr, "ls: usage error.\n")
+        fprintf(stderr, "ls: usage error.\n");
         _exit(-1);
       }
       else
         while(n--)
-          fprintf(STDOUT_FILENO, "%s\n", namelist[n]->d_name);
+          fprintf(stdout, "%s\n", namelist[n]->d_name);
 
-      free(name_list);
+      free(namelist);
 
     }
     else if(!strcmp(ecmd->argv[0], "rm"))
+    {
       if(remove(ecmd->argv[1]) != 0)
       {
-        fprintf(STDOUT_FILENO, "rm: unable to delete the file.\n");
+        fprintf(stdout, "rm: unable to delete the file.\n");
         _exit(-1);
       }
+    }
     else if(!strcmp(ecmd->argv[0], "cat"))
     {
       int fd;
       char ch;
       if((fd = open(ecmd->argv[1], O_RDONLY, 0)) < 0)
       {
-        fprintf(STDOUT_FILENO, "cat: open file error.\n");
+        fprintf(stdout, "cat: open file error.\n");
         _exit(-1);
       }
 
       while(read(fd, &ch, 1) != 0)
-        write(fd, &ch, 1);
+        write(1, &ch, 1);
       close(fd);
     }
     else
@@ -128,7 +131,7 @@ runcmd(struct cmd *cmd)
     rcmd = (struct redircmd*)cmd;
     // Your code here ...
     close(rcmd->fd);
-    if(open(rcmd->file, rcmd->flags) < 0)
+    if(open(rcmd->file, rcmd->flags, 0) < 0)
     {
       fprintf(stderr, "open %s failed.\n", rcmd->file);
       _exit(-1);
@@ -140,12 +143,15 @@ runcmd(struct cmd *cmd)
     pcmd = (struct pipecmd*)cmd;
     // Your code here ...
     if(pipe(p) < 0)
-      panic("pipe");
+    {
+      fprintf(stderr, "pipe: error.\n");
+      _exit(-1);
+    }
     
     if(fork1() == 0)
     {
       close(1); // redir the output to p[0]
-      dup(p[0]);
+      dup(p[1]);
       close(p[0]);
       close(p[1]);
       runcmd(pcmd->left);
@@ -156,7 +162,7 @@ runcmd(struct cmd *cmd)
       // the left command will exit during 'runcmd'
       // so only the father process can arrive here
       close(0); // redir the input to p[1]
-      dup(p[1]);
+      dup(p[0]);
       close(p[0]);
       close(p[1]);
       runcmd(pcmd->right);
@@ -166,8 +172,8 @@ runcmd(struct cmd *cmd)
     close(p[1]);
     // The wait() system call suspends execution of 
     // the calling process until one of its children terminates.
-    wait();
-    wait();
+    wait(&r);
+    wait(&r);
     break;
   }    
   _exit(0);

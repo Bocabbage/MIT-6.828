@@ -70,5 +70,22 @@
 
 - **Homework**
   * [x] HW1: Boot xv6
-  * [ ] HW2: Shell
+  * [x] HW2: Shell
+  * [ ] HW3: System Calls
+  * [ ] HW4: Lazy Page Allocation
+  * [ ] HW5: xv6 CPU alarm
+  * [ ] HW6:  Multithreaded Programming
+  * [ ] HW7: xv6 Locks
+  * [ ] HW8: Uthreads
+  * [ ] HW9: Barrier
+  * [ ] HW10: Big Files
+  * [ ] HW11: Crash
+  * [ ] HW12: Mmap
+  * [ ] HW13: Exokernel Question
+  * [ ] HW14: Biscuit Question
+  * [ ] HW15: Ticket Lock Question
+  * [ ] HW16: RCU Question
+  * [ ] HW17: VM Question
+  * [ ] HW18: Dune Question
+  * [ ] HW19: IX Question
 
