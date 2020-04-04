@@ -1,5 +1,5 @@
 /*
-    Modified date: 2020/3/30
+    Modified date: 2020/4/4
 */
 #include <stdlib.h>
 #include <unistd.h>
@@ -43,6 +43,13 @@ struct pipecmd {
   struct cmd *right; // right side of pipe
 };
 
+// Added for challenge problems
+struct semicmd {
+  int type;          // ;
+  struct cmd *left;  // left side command of ';'
+  struct cmd *right; // right side command(s) of ';'
+};
+
 int fork1(void);  // Fork but exits on failure.
 struct cmd *parsecmd(char*);
 
@@ -54,6 +61,7 @@ runcmd(struct cmd *cmd)
   struct execcmd *ecmd;
   struct pipecmd *pcmd;
   struct redircmd *rcmd;
+  struct semicmd *scmd;
 
   if(cmd == 0)
     _exit(0);
@@ -175,6 +183,22 @@ runcmd(struct cmd *cmd)
     wait(&r);
     wait(&r);
     break;
+
+  case ';':
+    scmd = (struct semicmd*)cmd;
+    if(fork1() == 0)
+      runcmd(scmd->left);
+
+    // Wait for the first task:
+    // prevent from problems like output chaos
+    wait(&r);
+
+    if(fork1() == 0)
+      runcmd(scmd->right);
+
+    wait(&r);
+    break;
+
   }    
   _exit(0);
 }
@@ -273,6 +297,18 @@ pipecmd(struct cmd *left, struct cmd *right)
   return (struct cmd*)cmd;
 }
 
+struct cmd*
+semicmd(struct cmd *left, struct cmd *right)
+{
+  struct semicmd *cmd;
+  cmd = malloc(sizeof(*cmd));
+  memset(cmd, 0, sizeof(*cmd));
+  cmd->type = ';';
+  cmd->left = left;
+  cmd->right = right;
+  return (struct cmd*)cmd;
+}
+
 // Parsing
 
 char whitespace[] = " \t\r\n\v";
@@ -295,6 +331,7 @@ gettoken(char **ps, char *es, char **q, char **eq)
   case 0:
     break;
   case '|':
+  case ';':
   case '<':
     s++;
     break;
@@ -377,9 +414,15 @@ parsepipe(char **ps, char *es)
   struct cmd *cmd;
 
   cmd = parseexec(ps, es);
-  if(peek(ps, es, "|")){
+  if(peek(ps, es, "|"))
+  {
     gettoken(ps, es, 0, 0);
     cmd = pipecmd(cmd, parsepipe(ps, es));
+  }
+  else if(peek(ps, es, ";"))
+  {
+    gettoken(ps, es, 0, 0);
+    cmd = semicmd(cmd, parsepipe(ps, es));
   }
   return cmd;
 }
@@ -421,7 +464,7 @@ parseexec(char **ps, char *es)
 
   argc = 0;
   ret = parseredirs(ret, ps, es);
-  while(!peek(ps, es, "|")){
+  while(!peek(ps, es, "|;")){
     if((tok=gettoken(ps, es, &q, &eq)) == 0)
       break;
     if(tok != 'a') {
