@@ -4,15 +4,21 @@
 
   ​	这个实验的主要工作其实就是开始构建JOS的*Virtual Memory System*，完成*Kernel Address Space*的映射。在Lab1中，我们使用 `entrypgdir.c` 将高位的4MB映射到了低位的4MB物理地址空间中，这其实就是简单的小虚拟内存系统了。Lab2要做的事情是在这4MB地址空间中完成一个二级页表的*Virtual Memory System*，并通过`lcr/rcr` 指令将其设置为JOS的内存系统。
 
+  ​	在实验开始前，高位内存映射是 `[KERNBASE, KERNBASE+4MB) --> [0, 4MB) `，我们将把这个区域的空间的一部分为新的内存映射提供页表。当前的高位映射是即将完成的新映射的子集。
+  
+  ​	另外补充一点：使用多级页表的情况下，**页表级数是由CPU决定的**，系统位数变化时，页表结构需要重写。32位平台一般使用2级页表，而x86-84则一般使用4级页表。
+  
   
 
 ## Part 1: Physical Page Management
 
-​	本节的内容是完成Physic Page Allocator部分的代码，也即**构建物理内存管理的monitor**。
+​	本节的内容是完成Physic Page Allocator部分的代码。
 
 ​	JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granularity*），核心的数据结构是`struct PageInfo` ：一个List-Node like的单元，用于记录某个page是否被使用，并在`kern/pmap.h` 中实现了一些宏，用于根据一个该类型对象找到对应的page，或根据page的物理地址找到对应的node。
 
+​	空闲页列表 `page_free_list` 是这样组织的：在 `boot_alloc()` 创建时，连续的空闲空间以每间隔一个PGSIZE的地址被记录，相当于每一个空闲页的头部放着下一个空闲页的首地址和`pp_ref`。
 
+![page_free_list](../../pics/page_free_list.jpg)
 
 ### Exercises
 
@@ -289,7 +295,7 @@
         // The page-addresses in Page-Directory are 'physical address'
   	return (pte_t*)(KADDR(PTE_ADDR(*pde))) + PTX(va);
     }
-  ```
+    ```
   
   
   
@@ -315,7 +321,7 @@
     		pte = pgdir_walk(pgdir,(void*)va, 1);
     		*pte = (pa | perm | PTE_P);
     	}
-  
+    
     }
   ```
   
@@ -335,7 +341,7 @@
     		return NULL;
     	if(pte_store != NULL)
     		*pte_store = pte;
-  	return pa2page(PTE_ADDR(*pte));
+    	return pa2page(PTE_ADDR(*pte));
     }
   ```
   
@@ -373,9 +379,9 @@
     	if( *now_pte & PTE_P)
     		page_remove(pgdir, va);
     	*now_pte = (page2pa(pp) | perm | PTE_P);
-  	return 0;
+    	return 0;
     }
-    ```
+   ```
   
     
 
