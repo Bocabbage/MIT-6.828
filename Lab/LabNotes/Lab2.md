@@ -16,7 +16,7 @@
 
 JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granularity*），核心的数据结构是`struct PageInfo` ：一个List-Node like的单元，用于记录某个page是否被使用，并在`kern/pmap.h` 中实现了一些宏，用于根据一个该类型对象找到对应的page，或根据page的物理地址找到对应的node。
 
-**这里要特别注意JOS和xv6在管理页方式上的不同：**在xv6中，不使用 `struct PageInfo` 来记录空闲页，而是直接将每个物理页的首地址link起来构成链表，因此每个空闲页的第一个字即为下一个空闲页的第一个字节地址；而xv6则单独构建了 `struct PageInfo` 的数组 `pages` ：JOS在内核VAS中为其单独准备了一段区域存放（也即RO PAGES段，见 `memlayout.h` ），而数组中每个页信息结构索引至对应物理页的方法是“当前下标 << log2(PGSIZE)”（见 `pmap.h/page2pa()` ），所以每个页信息结构内存储的信息与其对应的物理页是分离的。
+**这里要特别注意JOS和xv6在管理页方式上的不同** ：在xv6中，不使用 `struct PageInfo` 来记录空闲页，而是直接将每个物理页的首地址link起来构成链表，因此每个空闲页的第一个字即为下一个空闲页的第一个字节地址；而xv6则单独构建了 `struct PageInfo` 的数组 `pages` ：JOS在内核VAS中为其单独准备了一段区域存放（也即RO PAGES段，见 `memlayout.h` ），而数组中每个页信息结构索引至对应物理页的方法是“当前下标 << log2(PGSIZE)”（见 `pmap.h/page2pa()` ），所以每个页信息结构内存储的信息与其对应的物理页是分离的。
 
 
 
