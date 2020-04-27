@@ -2,23 +2,23 @@
 
 - Lab:  https://pdos.csail.mit.edu/6.828/2018/labs/lab2/ 
 
-  ​	这个实验的主要工作其实就是开始构建JOS的*Virtual Memory System*，完成*Kernel Address Space*的映射。在Lab1中，我们使用 `entrypgdir.c` 将高位的4MB映射到了低位的4MB物理地址空间中，这其实就是简单的小虚拟内存系统了。Lab2要做的事情是在这4MB地址空间中完成一个二级页表的*Virtual Memory System*，并通过`lcr/rcr` 指令将其设置为JOS的内存系统。
+  这个实验的主要工作其实就是开始构建JOS的*Virtual Memory System*，完成*Kernel Address Space*的映射。在Lab1中，我们使用 `entrypgdir.c` 将高位的4MB映射到了低位的4MB物理地址空间中，这其实就是简单的小虚拟内存系统了。Lab2要做的事情是在这4MB地址空间中完成一个二级页表的*Virtual Memory System*，并通过`lcr/rcr` 指令将其设置为JOS的内存系统。
 
-  ​	在实验开始前，高位内存映射是 `[KERNBASE, KERNBASE+4MB) --> [0, 4MB) `，我们将把这个区域的空间的一部分为新的内存映射提供页表。当前的高位映射是即将完成的新映射的子集。
+  在实验开始前，高位内存映射是 `[KERNBASE, KERNBASE+4MB) --> [0, 4MB) `，我们将把这个区域的空间的一部分为新的内存映射提供页表。当前的高位映射是即将完成的新映射的子集。
   
-  ​	另外补充一点：使用多级页表的情况下，**页表级数是由CPU决定的**，系统位数变化时，页表结构需要重写。32位平台一般使用2级页表，而x86-84则一般使用4级页表。
+  另外补充一点：使用多级页表的情况下，**页表级数是由CPU决定的**，系统位数变化时，页表结构需要重写。32位平台一般使用2级页表，而x86-84则一般使用4级页表。
   
   
 
 ## Part 1: Physical Page Management
 
-​	本节的内容是完成Physic Page Allocator部分的代码。
+本节的内容是完成Physic Page Allocator部分的代码。
 
-​	JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granularity*），核心的数据结构是`struct PageInfo` ：一个List-Node like的单元，用于记录某个page是否被使用，并在`kern/pmap.h` 中实现了一些宏，用于根据一个该类型对象找到对应的page，或根据page的物理地址找到对应的node。
+JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granularity*），核心的数据结构是`struct PageInfo` ：一个List-Node like的单元，用于记录某个page是否被使用，并在`kern/pmap.h` 中实现了一些宏，用于根据一个该类型对象找到对应的page，或根据page的物理地址找到对应的node。
 
-​	空闲页列表 `page_free_list` 是这样组织的：在 `boot_alloc()` 创建时，连续的空闲空间以每间隔一个PGSIZE的地址被记录，相当于每一个空闲页的头部放着下一个空闲页的首地址和`pp_ref`。
+**这里要特别注意JOS和xv6在管理页方式上的不同：**在xv6中，不使用 `struct PageInfo` 来记录空闲页，而是直接将每个物理页的首地址link起来构成链表，因此每个空闲页的第一个字即为下一个空闲页的第一个字节地址；而xv6则单独构建了 `struct PageInfo` 的数组 `pages` ：JOS在内核VAS中为其单独准备了一段区域存放（也即RO PAGES段，见 `memlayout.h` ），而数组中每个页信息结构索引至对应物理页的方法是“当前下标 << log2(PGSIZE)”（见 `pmap.h/page2pa()` ），所以每个页信息结构内存储的信息与其对应的物理页是分离的。
 
-![page_free_list](../../pics/page_free_list.jpg)
+
 
 ### Exercises
 
@@ -222,27 +222,27 @@
 
 ![VM](../../pics/VM.png)
 
-​		x86体系之中的地址概念可以分为三个：首先是程序中使用的**虚拟地址**（*Virtual Address*），它由Selector（段地址）以及Offset（段内偏移）构成；虚拟地址经过翻译变成所谓**线性地址**（*Linear Address*），根据到目前为止我的理解，它应该正是Paging机制中的虚拟页号；然后根据Paging机制查找对应的页表项（PTE），最后得到**物理地址**（*Physical Address*）。
+x86体系之中的地址概念可以分为三个：首先是程序中使用的**虚拟地址**（*Virtual Address*），它由Selector（段地址）以及Offset（段内偏移）构成；虚拟地址经过翻译变成所谓**线性地址**（*Linear Address*），根据到目前为止我的理解，它应该正是Paging机制中的虚拟页号；然后根据Paging机制查找对应的页表项（PTE），最后得到**物理地址**（*Physical Address*）。
 
-​		在这个Lab中我们暂且不讨论分段机制的作用（回忆Lab1的内容，我们在初始化GDT的时候实际上关闭了segment translation），留待Lab3处理。
+在这个Lab中我们暂且不讨论分段机制的作用（回忆Lab1的内容，我们在初始化GDT的时候实际上关闭了segment translation），留待Lab3处理。
 
-​		JOS使用的Virtual Memory System为**二级页表**，维护*Page Directory Table* 和 *Page Table* 两类结构。
+JOS使用的Virtual Memory System为**二级页表**，维护*Page Directory Table* 和 *Page Table* 两类结构。
 
-​		应当指出的是，在Lab1中分析Boot Loader的时候我们已经了解到，在进入protect mode之后，程序中出现的所有地址都是虚拟地址。JOS定义了 `unitptr_t` 和 `physaddr_t` 类型，分别表示虚拟地址与物理地址。为了防止对其直接解引用，两者都被设置为 `uint32_t` 类型；需要解引用时，首先需进行类型转换。
+应当指出的是，在Lab1中分析Boot Loader的时候我们已经了解到，在进入protect mode之后，程序中出现的所有地址都是虚拟地址。JOS定义了 `unitptr_t` 和 `physaddr_t` 类型，分别表示虚拟地址与物理地址。为了防止对其直接解引用，两者都被设置为 `uint32_t` 类型；需要解引用时，首先需进行类型转换。
 
 
 
 ### Reference Counting
 
-​		这一小节对 `PageInfo` 中的 `pp_ref` 作了一点注释：系统被设计为一个物理页可以被多个虚拟页映射到，同时系统维护 `pp_ref` 作为引用计数。当这个计数变为0时，调用 `page_free` 回收该页。
+这一小节对 `PageInfo` 中的 `pp_ref` 作了一点注释：系统被设计为一个物理页可以被多个虚拟页映射到，同时系统维护 `pp_ref` 作为引用计数。当这个计数变为0时，调用 `page_free` 回收该页。
 
-​		这里应当注意的是这个计数的维护是由 `page_alloc` 和 `page_free` 的**调用者**负责的，在两个函数内部并不直接增减其数值。
+这里应当注意的是这个计数的维护是由 `page_alloc` 和 `page_free` 的**调用者**负责的，在两个函数内部并不直接增减其数值。
 
 
 
 ### Page Table Management
 
-​		这部分内容集中在Exercise 4中，主要是实现页管理与查找的函数。具体见Exercise 4的内容。
+这部分内容集中在Exercise 4中，主要是实现页管理与查找的函数。具体见Exercise 4的内容。
 
 
 
@@ -262,7 +262,7 @@
 
 - **Exercise 4**
 
-  ​	完成page操作的一系列接口的实现，其中主要是利用Exercise 1中实现的接口进行进一步的抽象封装，构成真正可用的API。
+  完成page操作的一系列接口的实现，其中主要是利用Exercise 1中实现的接口进行进一步的抽象封装，构成真正可用的API。
 
   - **pgdir_walk**
 
@@ -301,7 +301,7 @@
   
 - **boot_map_region**
   
-    ​	被 `mem_init` 调用，用于实现*Virtual Address*到*Physical Address*的映射。
+    被 `mem_init` 调用，用于实现*Virtual Address*到*Physical Address*的映射。
   
     ```c
     static void
@@ -329,7 +329,7 @@
   
 - **page_lookup**
   
-    ​	通过一级页表和*Virtual Address*找到对应页的 `PageInfo` 节点。
+    通过一级页表和*Virtual Address*找到对应页的 `PageInfo` 节点。
   
     ```c
     struct PageInfo *
@@ -389,23 +389,23 @@
 
 ## Part 3: Kernel Address Space
 
-​		这部分内容是明确kernel态和用户态在地址空间使用上的隔离，并完成完整地址空间映射。
+这部分内容是明确kernel态和用户态在地址空间使用上的隔离，并完成完整地址空间映射。
 
-​		在Lab1中我们借助 `kern/entrypgdir.h` 映射了4MB的空间使用，但这是不足够的。
+在Lab1中我们借助 `kern/entrypgdir.h` 映射了4MB的空间使用，但这是不足够的。
 
-​		我们知道OS的一个重要特点是区分代码的访问权限，从而保证系统的稳定性和运行正确。具体而言，JOS在进入32-bit mode之后，将虚拟内存空间（其实准确的说，应该是线性地址空间）以 `ULIM` 为界分为上下两部分。
+我们知道OS的一个重要特点是区分代码的访问权限，从而保证系统的稳定性和运行正确。具体而言，JOS在进入32-bit mode之后，将虚拟内存空间（其实准确的说，应该是线性地址空间）以 `ULIM` 为界分为上下两部分。
 
 
 
 ### Permission and Fault Isolation
 
-​		JOS的地址空间结构见`kern/memorylaout.h` 。`ULIM` 以上的地址空间为为内核保留的*Kernel Address Space*，约有256MB，只允许内核态程序读写，并被映射到低位物理空间（见Lab1）；`[UTOP,ULIM)` 段的地址为保留固定内核数据结构的位置，内核态和用户态的程序都被设置为只读权限；`UTOP` 以下的地址空间为用户态使用。
+JOS的地址空间结构见`kern/memorylaout.h` 。`ULIM` 以上的地址空间为为内核保留的*Kernel Address Space*，约有256MB，只允许内核态程序读写，并被映射到低位物理空间（见Lab1）；`[UTOP,ULIM)` 段的地址为保留固定内核数据结构的位置，内核态和用户态的程序都被设置为只读权限；`UTOP` 以下的地址空间为用户态使用。
 
 
 
 ### Initializing the Kernel Address Space
 
-​		这部分内容要求完成对*Kernel Address Space*的初始化。
+这部分内容要求完成对*Kernel Address Space*的初始化。
 
 -  **Questions**
   1. 见Exercise 5的内容；
@@ -425,36 +425,38 @@
 
 - **Exercise 5**
 
-  ​	根据本节讲解部分的内容，需要我们完成*Kernel Address Space*的初始化，具体工作为将*Virtual Address*映射到相应的*Physical Address*上。构建映射具体来说就是填充*Page Directory*和*Page Table*结构中相应项。
+  根据本节讲解部分的内容，需要我们完成*Kernel Address Space*的初始化，具体工作为将*Virtual Address*映射到相应的*Physical Address*上。构建映射具体来说就是填充*Page Directory*和*Page Table*结构中相应项。
 
-  ​	根据提示，三个小节的代码都由 `boot_map_region` 函数完成映射工作。
+  根据提示，三个小节的代码都由 `boot_map_region` 函数完成映射工作。
 
-  ​	第一部分是将 `pages` 映射为*user-read-only*，且根据 `kern/memorylayout.h` 中的地址空间框架，这部分（RO PAGES）占据一个 `PTSIZE` 大小的段。
+  第一部分是将 `pages` 映射为*user-read-only*，且根据 `kern/memorylayout.h` 中的地址空间框架，这部分（RO PAGES）占据一个 `PTSIZE` 大小的段。
 
   ```c
   // Note: PTE_P permission has been added by boot_map_region itself.
   boot_map_region(kern_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U);
   ```
 
-  ​	第二部分是映射内核栈。根据提示，内核栈实际大小为一个 `PTSIZE` ，即 `[KSTACKTOP-PTSIZE, KSTACKTOP)` 地址段，这个地址段被进一步细分为两部分：
+  
+
+  第二部分是映射内核栈。根据提示，内核栈实际大小为一个 `PTSIZE` ，即 `[KSTACKTOP-PTSIZE, KSTACKTOP)` 地址段，这个地址段被进一步细分为两部分：
 
   ​	`[KSTACKTOP-KSTKSIZE, KSTACKTOP)` ：backed by physical memory
 
   ​	`[KSTACKTOP-PTSIZE, KSTACKTOP-KSTKSIZE)` ：not backed
 
-  ​	也即是说，只有第一部分的虚拟地址空间被映射到了物理地址空间中，作为实际的内核栈使用。第二部分的内存段是未构建映射的，也就是说一旦发生写内核栈溢出，就会直接报错而不会出现覆写原有数据的情况，因此第二部分内存段也被称为***Guide Page***。
-
+  也即是说，只有第一部分的虚拟地址空间被映射到了物理地址空间中，作为实际的内核栈使用。第二部分的内存段是未构建映射的，也就是说一旦发生写内核栈溢出，就会直接报错而不会出现覆写原有数据的情况，因此第二部分内存段也被称为***Guide Page***。
+  
   ```c
-  boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W);
+boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W);
   ```
 
-  ​	第三部分将高位虚拟内存地址段 `[KERNBASE, 2^32)` 映射到低位物理段 `[0, 2^32 - KERNBASE)` 。
+  第三部分将高位虚拟内存地址段 `[KERNBASE, 2^32)` 映射到低位物理段 `[0, 2^32 - KERNBASE)` 。
 
-  ​	这一步与Lab1中借助 `kern/entrypgdir.c` 构建映射是相同的概念，只是这一次映射了完整的256MB（注意：实际运行的机器中可能并没有这么多的物理内存）。
-
+  这一步与Lab1中借助 `kern/entrypgdir.c` 构建映射是相同的概念，只是这一次映射了完整的256MB（注意：实际运行的机器中可能并没有这么多的物理内存）。
+  
   ```c
   /* Note: 0x10000000 comes from (4G - KERNBASE) = 0x100000000 - 0xf0000000 */
-  boot_map_region(kern_pgdir, KERNBASE, 0x10000000, 0, PTE_W);
+boot_map_region(kern_pgdir, KERNBASE, 0x10000000, 0, PTE_W);
   ```
-
+  
   

@@ -2,17 +2,17 @@
 
 - Lab:  https://pdos.csail.mit.edu/6.828/2018/labs/lab3/ 
 
-  ​	这个实验的主要工作是构建*User-mode environment*（这里的environment与process同义）。
+  这个实验的主要工作是构建*User-mode environment*（这里的environment与process同义）。
 
 
 
 ## Part A: User Environments and Exception Handling
 
-​		JOS对*user process*的抽象设计放在 `inc/env.h & kern/env.c` 中，主要数据结构是 `struct Env`，使用三个全局变量：`envs, curenv, env_free_list` 对所有用户进程及当前进程进行管理。
+JOS对*user process*的抽象设计放在 `inc/env.h & kern/env.c` 中，主要数据结构是 `struct Env`，使用三个全局变量：`envs, curenv, env_free_list` 对所有用户进程及当前进程进行管理。
 
 ### A.1 Environment State
 
-​		对于每一个用户进程，JOS用 `struct Env` 来描述：
+对于每一个用户进程，JOS用 `struct Env` 来描述：
 
 ```c
 struct Env {
@@ -31,15 +31,15 @@ struct Env {
 
 其中当空闲env被放入`env_free_list` 中时依靠 `env_link` 构建链表。
 
-​		JOS的Environment组成与\*nix系统相似，由*Thread*和*Address Space*两部分概念组成：前者由 `env_tf` 中的寄存器描述，后者由 `env_pgdir` 指向的页表目录描述。
+JOS的Environment组成与\*nix系统相似，由*Thread*和*Address Space*两部分概念组成：前者由 `env_tf` 中的寄存器描述，后者由 `env_pgdir` 指向的页表目录描述。
 
-​		另外需要注意JOS与xv6的区别：JOS采用的是*Single Kernel Stack*的设计，一次只能有一个进程陷入内核；而xv6的每个进程都拥有独立的内核栈（xv6的进程由 `struct proc` 描述）。
+另外需要注意JOS与xv6的区别：JOS采用的是*Single Kernel Stack*的设计，一次只能有一个进程陷入内核；而xv6的每个进程都拥有独立的内核栈（xv6的进程由 `struct proc` 描述）。
 
 
 
 ### A.2 Allocating the Environments Array
 
-​		JOS管理Environments的方式与管理Pages相同，维护一个数组 `struct Env *envs`。
+JOS管理Environments的方式与管理Pages相同，维护一个数组 `struct Env *envs`。
 
 - **Exercise 1**
 
@@ -65,9 +65,9 @@ struct Env {
 
 ### A.3 Creating and Running Environments
 
-​		映射完成后，我们需要对Environments进行初始化使其可以运行。在当前实验阶段JOS还没有文件系统，因此实验**从镜像中读取进程状态**。这些镜像被嵌在JOS内核中，以*ELF*形式保存。
+映射完成后，我们需要对Environments进行初始化使其可以运行。在当前实验阶段JOS还没有文件系统，因此实验**从镜像中读取进程状态**。这些镜像被嵌在JOS内核中，以*ELF*形式保存。
 
-​		实验提示我们去观察 `kern/Makeflag` 中的情况，我们会发现：
+实验提示我们去观察 `kern/Makeflag` 中的情况，我们会发现：
 
 ```makefile
 # Binary program images to embed within the kernel.
@@ -87,7 +87,7 @@ KERN_BINFILES :=	user/hello \
                     user/faultwritekernel
 ```
 
-​		这些二进制文件像.o文件一样被直接“链接”到内核中。再观察 `obj/kern/kernel.sym` （kernel的符号表），可以发现链接器会赋予这些二进制文件一些相对复杂的符号供内核使用：
+这些二进制文件像.o文件一样被直接“链接”到内核中。再观察 `obj/kern/kernel.sym` （kernel的符号表），可以发现链接器会赋予这些二进制文件一些相对复杂的符号供内核使用：
 
 ```
 0000e844 A _binary_obj_user_hello_size
