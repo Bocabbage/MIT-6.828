@@ -83,9 +83,8 @@ JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granu
   
   - **page_init**
   
-  ​	完成VM分页功能启动的初始化：将所有页的Info放入 `page_free_list` 中备用（相当于初始化该List）。实际工作要稍微复杂些，主要因为有一些特殊情况：
-  
-  - 第一个page不被使用；
+    完成VM分页功能启动的初始化：将所有页的Info放入 `page_free_list` 中备用（相当于初始化该List）。实际工作要稍微复杂些，主要因为有一些特殊情况：
+    - 第一个page不被使用；
     - 在 `[IOPHYSMEM,EXTPHYSMEM)` 地址段的内存是为IO准备的（*IO Hole*），这段的pages也不被使用。
   
     综合上述情况，pageInfo的初始化应当分段进行。代码如下：
@@ -123,13 +122,13 @@ JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granu
     	------------ <- 0x0A0000
     	|  Low Mem |
     	------------ <- 0x000000
-  	
-    	where the '96' comes from:
-		(EXTPHYSMEM - IOPHYSMEM) / PGSIZE
-    	  = (0x100000   - 0x0A0000 ) / 0x1000
-	  =  0x6 = (DEC)96
     
-  	*/
+    	where the '96' comes from:
+    (EXTPHYSMEM - IOPHYSMEM) / PGSIZE
+	  	  = (0x100000   - 0x0A0000 ) / 0x1000
+    =  0x6 = (DEC)96
+	  
+    */
     	const size_t pages_in_use_end = npages_basemem + 96 + (PADDR(boot_alloc(0))) / PGSIZE;
     	for(; i < pages_in_use_end; ++i)
     		pages[i].pp_ref = 1;
@@ -142,9 +141,9 @@ JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granu
     	}	
     }
     ```
+  
     
-    
-    
+  
   - **page_alloc （pages分配功能核心）**
   
     ​	如前文所述，这个函数是VM系统初始化完成后真正的allocator。其工作是查找 `page_free_list`（即记录空闲页的List like structure，Node即为 `PageInfo` ），取出一个page分配给调用者。
@@ -158,16 +157,16 @@ JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granu
             return NULL;
     	struct PageInfo *result = page_free_list;
     	page_free_list = page_free_list->pp_link;
-  	result->pp_link = NULL;
+    result->pp_link = NULL;
     	if(alloc_flags & ALLOC_ZERO)
           /* See notes below */
     		memset(page2kva(result),0,PGSIZE);
-  	return result;
+    return result;
     }
     ```
-    
+  
     这里需要特别指出的是 `page2kva` 函数在这里的应用。从函数原型我们也可以猜到这是根据以 `PageInfo` 指针作为输入得到与该Node对应的页的物理地址。我们进入 `pamp.h` 并展开该函数的调用：
-    
+  
     ```c
     /*
       ORIGINAL CALL:
@@ -186,7 +185,7 @@ JOS的Physical Memory管理是以页为单位的（颗粒度为页，*Page granu
         return ((pp - pages) << PGSHIFT) + KERNsBASE);
     }
     ```
-    
+  
     
   
     ​	展开后我们就可以很清楚地看到 `PageInfo Node` 是怎么跟物理页联系的了：`pages` 中Node的index（或者说offset）与其对应的物理页的offset是相同的，对应映射一个PGSIZE的地址段作为页。
