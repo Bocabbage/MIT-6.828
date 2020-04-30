@@ -320,15 +320,176 @@ KERN_BINFILES :=	user/hello \
 
 ### A.4 Handling Interrupts and Exceptions
 
+Part A后半部分的内容涉及中断和异常的处理。按照作业提示，在 `hello.asm` 中找到引发程序停止的位置 `int $0x30` ，这个错误是由于 `int` 指令发送中断向量后没有对应的处理程序(*handler*)所致。
+
+（注：在该Lab中，interrupt，trap，exception和fault的细微差别不被考虑，视作等价概念）
+
+- **Exercise 3**
+
+  阅读材料，略。
+
+
+
 ### A.5 Basics of Protected Control Transfer
+
+异常(*Exception*)和中断(*Interrupt*)都属于保护控制转移(*Protect Control Transfer*)，根据Intel的定义，前者是指由当前运行的进程引起的同步(*synchronous*)信号，也称为**内部中断**（一般被设计为不可屏蔽的）；而后者指外部设备引发的异步(*Asynchronous*)信号，例如硬盘等I/O设备发送的信号，也称**外部中断**。
+
+x86体系使用两种机制来提供这种保护：
+
+- **中断向量表(Interrupt Descriptor Table, IDT)**
+
+  设置对应不同**中断向量**（一个整数）的handler入口。x86最多接受256个不同的中断/异常，CPU以IDT为索引找到处理程序的入口。CPU利用该表执行两件事：
+
+  - 将处理程序加载到EIP寄存器（也即PC寄存器）
+  - 将特权级加载到CS(Code Segment)寄存器
+
+- **任务状态段(Task State Segment, TSS)**
+
+  在加载新的执行位置和特权级前，**需保存当前进程的信息，同时将栈切换到内核栈**。x86提供一个TSS结构，这个结构内容很多，JOS只使用它的 `ESP0` 和 `SS0` 段来切换到内核栈。
+
+
 
 ### A.6 Types of Exceptions and Interrupts & Example
 
+x86的0~31中断向量用于映射已定义的硬件中断，大于31的中断向量只能被软件中断或异步中断使用。**Part A的最后一个任务是使JOS正常处理0~31号中断，在Part B会尝试处理软件中断。**
+
+
+
+x86中发送中断的指令是 `int n` 指令，它完成以下任务：
+
+- 根据n索引IDT找到程序入口
+- 检查 `%cs` 的权限位(CPL)
+- 将`%esp` 和 `%ss` 存入CPU内部空闲寄存器
+- 从TSS中加载内核栈的 `%ss` 和 `%esp`
+- 将旧的 `%ss`，`%esp`，以及 `%eflags`，`%cs`，`%eip`依次入栈
+- 如果类型为Interrupt，则将 `%eflags` 的IF位清0（IF: Interrupt Enable Flag，置0时屏蔽外部中断）
+- 将控制交给IDT表中对应的处理函数入口（处理函数负责调用 `iret` 退出中断处理）
+
+![kstack](../../pics/interrupt_kstack.png)
+
+
+
+
+
 ### A.7 Nested Exceptions and Interrupts
+
+当已经处于内核态时，也可以继续嵌套处理中断和异常，此时会在内核栈中继续装填处理帧，唯一不同的是不会再将 `%ss` 和 `%esp` 入栈。
+
+
 
 ### A.8 Setting Up the IDT
 
+- **Exercise 4**
 
+  这一部分实验要完成对IDT的基本初始化，修改 `trapentry.S` 和 `trap.c`。
+
+  `trapentry.S` 中提供了两个宏 `TRAPHANDLER/TRAPHANDLER_NOEC` 用于生成处理函数入口（与xv6中的`vectors.pl` 功能相似），其中产不产生Error Code由Exercise 3中提供的材料可以了解到，当然也可以偷懒直接参考xv6的源码。设置代码如下：
+
+  ```assembly
+  /*
+   * Lab 3: Your code here for generating entry points for the different traps.
+   */
+  TRAPHANDLER_NOEC(DIVIDE, T_DIVIDE)
+  TRAPHANDLER_NOEC(DEBUG, T_DEBUG)
+  TRAPHANDLER_NOEC(NMI, T_NMI)
+  TRAPHANDLER_NOEC(BRKPT, T_BRKPT)
+  TRAPHANDLER_NOEC(OFLOW, T_OFLOW)
+  TRAPHANDLER_NOEC(BOUND, T_BOUND)
+  TRAPHANDLER_NOEC(ILLOP, T_ILLOP)
+  TRAPHANDLER_NOEC(DEVICE, T_DEVICE)
+  TRAPHANDLER(DBLFLT, T_DBLFLT)
+  TRAPHANDLER(TSS, T_TSS)
+  TRAPHANDLER(SEGNP, T_SEGNP)
+  TRAPHANDLER(STACK, T_STACK)
+  TRAPHANDLER(GPFLT, T_GPFLT)
+  TRAPHANDLER(PGFLT, T_PGFLT)
+  TRAPHANDLER_NOEC(FPERR, T_FPERR)
+  TRAPHANDLER(ALIGN, T_ALIGN)
+  TRAPHANDLER_NOEC(MCHK, T_MCHK)
+  TRAPHANDLER_NOEC(SIMDERR, T_SIMDERR)
+  TRAPHANDLER_NOEC(SYSCALL, T_SYSCALL)
+  TRAPHANDLER_NOEC(DEFAULT, T_DEFAULT)
+  ```
+
+  观察两个宏的定义，都能发现设置完后都会跳转到 `__alltraps` 入口进行通用处理，根据作业提示并参考xv6的源码，完成代码如下：
+
+  ```assembly
+  /*
+   * Lab 3: Your code here for _alltraps
+   */
+   .global _alltraps
+  _alltraps:
+  	pushl %ds
+  	pushl %es
+  	pushal
+  	movw $GD_KD, %ax
+  	movw %ax, %ds
+  	movw %ax, %es
+  	pushl %esp
+  	call trap
+  ```
+
+  这段代码最后会跳转到 `trap.c/trap()` 进行真正的中断处理。
+
+  最后，我们需要填写用于trap初始化的 `trap.c/trap_init()` 函数，同样可以参考xv6：
+
+  ```c
+  void
+  trap_init(void)
+  {
+  	extern struct Segdesc gdt[];
+  
+  	// LAB 3: Your code here.
+  	// Declare the functions from trapentry.S
+  	void DIVIDE();
+  	void DEBUG();
+  	void NMI();
+  	void BRKPT();
+  	void OFLOW();
+  	void BOUND();
+  	void ILLOP();
+  	void DEVICE();
+  	void DBLFLT();
+  	void TSS();
+  	void SEGNP();
+  	void STACK();
+  	void GPFLT();
+  	void PGFLT();
+  	void FPERR();
+  	void ALIGN();
+  	void MCHK();
+  	void SIMDERR();
+  	void SYSCALL();
+  	void DEFAULT();
+  
+  	SETGATE(idt[T_DIVIDE], 0, GD_KT, DIVIDE, 0);
+  	SETGATE(idt[T_DEBUG], 0, GD_KT, DEBUG, 0);
+  	SETGATE(idt[T_NMI], 0, GD_KT, NMI, 0);
+  	SETGATE(idt[T_BRKPT], 0, GD_KT, BRKPT, 0);
+  	SETGATE(idt[T_OFLOW], 0, GD_KT, OFLOW, 0);
+  	SETGATE(idt[T_BOUND], 0, GD_KT, BOUND, 0);
+  	SETGATE(idt[T_ILLOP], 0, GD_KT, ILLOP, 0);
+  	SETGATE(idt[T_DEVICE], 0, GD_KT, DEVICE, 0);
+  	SETGATE(idt[T_DBLFLT], 0, GD_KT, DBLFLT, 0);
+  	SETGATE(idt[T_TSS], 0, GD_KT, TSS, 0);
+  	SETGATE(idt[T_SEGNP], 0, GD_KT, SEGNP, 0);
+  	SETGATE(idt[T_STACK], 0, GD_KT, STACK, 0);
+  	SETGATE(idt[T_GPFLT], 0, GD_KT, GPFLT, 0);
+  	SETGATE(idt[T_PGFLT], 0, GD_KT, PGFLT, 0);
+  	SETGATE(idt[T_FPERR], 0, GD_KT, FPERR, 0);
+  	SETGATE(idt[T_ALIGN], 0, GD_KT, ALIGN, 0);
+  	SETGATE(idt[T_MCHK], 0, GD_KT, MCHK, 0);
+  	SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMDERR, 0);
+  	SETGATE(idt[T_SYSCALL], 1, GD_KT, SYSCALL, 3);
+  	SETGATE(idt[T_DEFAULT], 0, GD_KT, DEFAULT, 0);
+  
+  
+  	// Per-CPU setup 
+  	trap_init_percpu();
+  }
+  ```
+
+  
 
 
 
