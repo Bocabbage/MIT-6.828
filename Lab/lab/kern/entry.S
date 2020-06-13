@@ -2,6 +2,7 @@
 
 #include <inc/mmu.h>
 #include <inc/memlayout.h>
+#include <inc/trap.h>
 
 # Shift Right Logical 
 #define SRL(val, shamt)		(((val) >> (shamt)) & ~(-1 << (32 - (shamt))))
@@ -93,4 +94,5 @@ bootstack:
 	.space		KSTKSIZE
 	.globl		bootstacktop   
 bootstacktop:
+
 
