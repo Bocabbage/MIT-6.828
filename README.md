@@ -62,7 +62,7 @@
 - **Lab**
   * [x] Lab1: Booting a PC
   * [x] Lab2: Memory Management
-  * [ ] Lab3: User-Level Environments
+  * [x] Lab3: User-Level Environments
   * [ ] Lab4: Preemptive Multitasking
   * [ ] Lab5: File system, spawn, and sh
   * [ ] *Lab6: Networking
@@ -73,7 +73,7 @@
   * [x] HW2: Shell
   * [x] HW3: System Calls
   * [x] HW4: Lazy Page Allocation
-  * [ ] HW5: xv6 CPU alarm
+  * [x] HW5: xv6 CPU alarm
   * [ ] HW6:  Multithreaded Programming
   * [ ] HW7: xv6 Locks
   * [ ] HW8: Uthreads
