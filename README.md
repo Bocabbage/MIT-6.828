@@ -74,7 +74,7 @@
   * [x] HW3: System Calls
   * [x] HW4: Lazy Page Allocation
   * [x] HW5: xv6 CPU alarm
-  * [ ] HW6:  Multithreaded Programming
+  * [x] HW6: Multithreaded Programming
   * [ ] HW7: xv6 Locks
   * [ ] HW8: Uthreads
   * [ ] HW9: Barrier
