@@ -75,7 +75,7 @@
   * [x] HW4: Lazy Page Allocation
   * [x] HW5: xv6 CPU alarm
   * [x] HW6: Multithreaded Programming
-  * [ ] HW7: xv6 Locks
+  * [x] HW7: xv6 Locks
   * [ ] HW8: Uthreads
   * [ ] HW9: Barrier
   * [ ] HW10: Big Files
