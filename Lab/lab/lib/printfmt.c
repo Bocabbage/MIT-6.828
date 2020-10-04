@@ -26,6 +26,8 @@ static const char * const error_string[MAXERROR] =
 	[E_NO_MEM]	= "out of memory",
 	[E_NO_FREE_ENV]	= "out of environments",
 	[E_FAULT]	= "segmentation fault",
+	[E_IPC_NOT_RECV]= "env is not recving",
+	[E_EOF]		= "unexpected end of file",
 };
 
 /*
@@ -82,8 +84,6 @@ void printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);
 void
 vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 {
-	// putdat: record the number of char been put.
-	// ap: get formated-para list.
 	register const char *p;
 	register int ch, err;
 	unsigned long long num;
@@ -208,13 +208,10 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		// (unsigned) octal
 		case 'o':
 			// Replace this with your code.
-			// putch('X', putdat);
-			// putch('X', putdat);
-			// putch('X', putdat);
-			// break;
-			num = getuint(&ap, lflag);
-			base = 8;
-			goto number;
+			putch('X', putdat);
+			putch('X', putdat);
+			putch('X', putdat);
+			break;
 
 		// pointer
 		case 'p':
@@ -223,13 +220,12 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			num = (unsigned long long)
 				(uintptr_t) va_arg(ap, void *);
 			base = 16;
-			goto number;			
+			goto number;
 
 		// (unsigned) hexadecimal
 		case 'x':
 			num = getuint(&ap, lflag);
 			base = 16;
-
 		number:
 			printnum(putch, putdat, num, base, width, padc);
 			break;
@@ -238,7 +234,6 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		case '%':
 			putch(ch, putdat);
 			break;
-
 
 		// unrecognized escape sequence - just print it literally
 		default:
@@ -253,9 +248,6 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 void
 printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...)
 {
-	// va series function/objects are for processing the variable paras.
-	// va_start(ap,para_name) get the va_list after the para_name.
-	// va_end ends traversal of the variadic function arguments.
 	va_list ap;
 
 	va_start(ap, fmt);
@@ -306,5 +298,6 @@ snprintf(char *buf, int n, const char *fmt, ...)
 
 	return rc;
 }
+
 
 
