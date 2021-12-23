@@ -10,12 +10,17 @@
 
 ### 环境搭建
 
-- 实验环境：Windows10 WSL2 (Ubuntu 16.04)
+- 实验环境：Windows10 WSL2 (Ubuntu 16.04 --> Ubuntu 20.04)
 
 - 工具链：[Tools Used in 6.828](https://pdos.csail.mit.edu/6.828/2018/tools.html)
 
-  ​	环境搭建流程按照上述页面提示；可能会遇到一些问题，可能需执行：
+  环境搭建流程按照上述页面提示，分别需要安装：
 
+  - Compile Toolchain [objdump, gcc, gdb, gcc-multilib]
+  - Qemu (qemu-sys) [通过git链接安装]
+  
+  可能会遇到一些问题，需执行额外操作：
+  
   ```shell
   # For test the tool-chain, you can run:
   gcc -m32 -print-libgcc-file-name # Ensure the env is ok
@@ -38,13 +43,13 @@
   # During Compiling:
   
   # Error1:
-  # '/home/fabrice/6.828/qemu/rules.mak:57: 
+  # '/home/6.828/qemu/rules.mak:57: 
   # recipe for target 'qga/commands-posix.o' failed' 
   # Solution:
   # 	Add '#include<sys/sysmacros.h>' to qga/commands-posix.c
   
   # Error2:
-  # '/home/fabrice/6.828/qemu/rules.mak:57: recipe for target 'block/blkdebug.o' failed'
+  # '/home/6.828/qemu/rules.mak:57: recipe for target 'block/blkdebug.o' failed'
   #Solution:
   #	Remove '-Werror' in config-host.mak
   
