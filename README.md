@@ -3,8 +3,11 @@
 
 
 -  [MIT6.828: Fall 2018](https://pdos.csail.mit.edu/6.828/2018/schedule.html) 课程Homework与Labs内容
-
 - 课程参考讲义(xv6)：[xv6-handbook](https://pdos.csail.mit.edu/6.828/2018/xv6/book-rev11.pdf)
+-  其他参考内容：
+   - [NJU Operating System](https://www.bilibili.com/video/BV1N741177F5)
+   - [Operating System: Three Easy Pieces](http://pages.cs.wisc.edu/~remzi/OSTEP/)
+   - 
 
 
 
@@ -61,26 +64,29 @@
 
 
 
-
 ### 进度
+
+注1：2021年12月重新实验，此处标记的进度为该次实验进度
+
+注2：重新完成的实验内容根据 Lab 创建了不同分支，各实验内容详见各分支
 
 - **Lab**
   * [x] Lab1: Booting a PC
-  * [x] Lab2: Memory Management
-  * [x] Lab3: User-Level Environments
-  * [x] Lab4: Preemptive Multitasking
+  * [ ] Lab2: Memory Management
+  * [ ] Lab3: User-Level Environments
+  * [ ] Lab4: Preemptive Multitasking
   * [ ] Lab5: File system, spawn, and sh
   * [ ] *Lab6: Networking
   * [ ] *Lab7: Final project
 
 - **Homework**
   * [x] HW1: Boot xv6
-  * [x] HW2: Shell
-  * [x] HW3: System Calls
-  * [x] HW4: Lazy Page Allocation
-  * [x] HW5: xv6 CPU alarm
-  * [x] HW6: Multithreaded Programming
-  * [x] HW7: xv6 Locks
+  * [ ] HW2: Shell
+  * [ ] HW3: System Calls
+  * [ ] HW4: Lazy Page Allocation
+  * [ ] HW5: xv6 CPU alarm
+  * [ ] HW6: Multithreaded Programming
+  * [ ] HW7: xv6 Locks
   * [ ] HW8: Uthreads
   * [ ] HW9: Barrier
   * [ ] HW10: Big Files
