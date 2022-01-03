@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  3 JAN 2022 15:07
+This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  3 JAN 2022 15:20
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -435,8 +435,7 @@ Package fontspec Info: Font family 'TimesNewRoman(0)' created for font 'Times
 (fontspec)             <->"Times New
 (fontspec)             Roman/BI/OT:script=latn;language=dflt;+smcp;mapping=tex-text;"
 
-
-No file Lab1.aux.
+ (./Lab1.aux)
 \openout1 = `Lab1.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 96.
@@ -459,6 +458,7 @@ LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 96.
 LaTeX Font Info:    ... okay on input line 96.
 LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 96.
 LaTeX Font Info:    ... okay on input line 96.
+
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
 *geometry* verbose mode - [ preamble ] result:
@@ -509,21 +509,25 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 LaTeX Info: Redefining \ref on input line 96.
 LaTeX Info: Redefining \pageref on input line 96.
 LaTeX Info: Redefining \nameref on input line 96.
+ (./Lab1.out) (./Lab1.out)
 \@outlinefile=\write3
 \openout3 = `Lab1.out'.
-
-
-
-Package hyperref Warning: Rerun to get /PageLabels entry.
 
 \c@lstlisting=\count303
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <14.4> on input line 99.
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <7> on input line 99.
-[1
+ [1
 
-]
+] (./Lab1.toc
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 2.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 2.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 2.
+)
 \tf@toc=\write4
 \openout4 = `Lab1.toc'.
 
@@ -563,229 +567,119 @@ LaTeX Font Info:    Font shape `TU/TimesNewRoman(0)/m/sl' in size <12> not avail
  [1
 
 ]
+File: ./pics/IA32-syslevel.png Graphic file (type bmp)
+<./pics/IA32-syslevel.png>
 
-./Lab1.tex:152: LaTeX Error: File `IA32-syslevel' not found.
+Overfull \hbox (24.01228pt too wide) in paragraph at lines 152--154
+[][]
+ []
 
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.152 ...th,height=0.78\textheight]{IA32-syslevel}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
 
+Underfull \hbox (badness 10000) in paragraph at lines 152--154
+
+ []
+
+[2]
 LaTeX Font Info:    Font shape `TU/SimSun(0)/m/sl' in size <12> not available
 (Font)              Font shape `TU/SimSun(0)/m/it' tried instead on input line 160.
+File: ./pics/PC_PhysicalAddressSpace.png Graphic file (type bmp)
+<./pics/PC_PhysicalAddressSpace.png>
 
-./Lab1.tex:163: LaTeX Error: File `PC_PhysicalAddressSpace' not found.
+Overfull \hbox (24.0pt too wide) in paragraph at lines 163--166
+[][]
+ []
 
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.163 ...idth=\textwidth]{PC_PhysicalAddressSpace}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[2] [3]
+[3] [4]
 Chapter 2.
-
-./Lab1.tex:223: LaTeX Error: File `GDTEntry' not found.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.223 ...degraphics[width=0.8\textwidth]{GDTEntry}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-./Lab1.tex:228: LaTeX Error: File `SegmentSelector' not found.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.228 ...aphics[width=\textwidth]{SegmentSelector}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[4
+File: ./pics/GDTEntry.png Graphic file (type bmp)
+<./pics/GDTEntry.png>
+[5
 
 ]
+File: ./pics/SegmentSelector.png Graphic file (type bmp)
+<./pics/SegmentSelector.png>
 
-./Lab1.tex:233: LaTeX Error: File `GDT' not found.
+Overfull \hbox (24.0pt too wide) in paragraph at lines 228--231
+[][]
+ []
 
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.233 \includegraphics[width=0.8\textwidth]{GDT}
-                                                
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-./Lab1.tex:291: LaTeX Error: File `real2protect' not found.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.291 ...aphics[width=0.8\textwidth]{real2protect}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[5]
-
-./Lab1.tex:299: LaTeX Error: File `lastfirst' not found.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.299 ...egraphics[width=0.8\textwidth]{lastfirst}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-./Lab1.tex:381: LaTeX Error: File `cantJmp' not found.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.381 ...udegraphics[width=0.8\textwidth]{cantJmp}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[6] [7]
+File: ./pics/GDT.png Graphic file (type bmp)
+<./pics/GDT.png>
+[6]
+File: ./pics/real2protect.png Graphic file (type bmp)
+<./pics/real2protect.png>
+File: ./pics/lastfirst.png Graphic file (type bmp)
+<./pics/lastfirst.png>
+ [7]
+File: ./pics/cantJmp.png Graphic file (type bmp)
+<./pics/cantJmp.png>
+ [8] [9]
 Chapter 3.
+File: ./pics/entrypgdir_start.png Graphic file (type bmp)
+<./pics/entrypgdir_start.png>
 
-./Lab1.tex:429: LaTeX Error: File `entrypgdir_start' not found.
+Overfull \hbox (24.0pt too wide) in paragraph at lines 429--429
+[][] 
+ []
 
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.429 ...phics[width=\textwidth]{entrypgdir_start}
-                                                   \par
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-[8
+[10
 
 ]
+File: ./pics/cprintf_callchain.png Graphic file (type bmp)
+<./pics/cprintf_callchain.png>
 
-./Lab1.tex:442: LaTeX Error: File `cprintf_callchain' not found.
+Overfull \hbox (24.0pt too wide) in paragraph at lines 442--442
+[][] 
+ []
 
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.442 ...hics[width=\textwidth]{cprintf_callchain}
-                                                   \par
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-(c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
+[11] (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2020/03/24 1.8d listings language file
 ) (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2020/03/24 1.8d (Carsten Heinz)
-) [9]
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <12> on input line 502.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 502.
-LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 502.
- [10] [11]
+) [12] [13] [14]
+File: ./pics/test_backtrace.png Graphic file (type bmp)
+<./pics/test_backtrace.png>
 
-./Lab1.tex:611: LaTeX Error: File `test_backtrace' not found.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.611 ...raphics[width=\textwidth]{test_backtrace}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
+Overfull \hbox (24.0pt too wide) in paragraph at lines 611--612
+[][]
+ []
 
 
-./Lab1.tex:621: LaTeX Error: File `StackFrame' not found.
+Underfull \hbox (badness 10000) in paragraph at lines 611--612
 
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.621 ...udegraphics[width=\textwidth]{StackFrame}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.PDF,.ai,.AI,.png,.PNG,.jpg,.JPG,.jpeg,.JPEG,.jp2,.JP2,.jpf,.JPF,.bmp,.BMP,.ps,.PS,.eps,.EPS,.mps,.MPS,.pz,.eps.Z,.ps.Z,.ps.gz,.eps.gz
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
+ []
 
-[12] [13] (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
+[15]
+File: ./pics/StackFrame.png Graphic file (type bmp)
+<./pics/StackFrame.png>
+
+Overfull \hbox (24.0pt too wide) in paragraph at lines 621--622
+[][] 
+ []
+
+[16] [17] (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2020/03/24 1.8d listings language file
 ) (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang2.sty
 File: lstlang2.sty 2020/03/24 1.8d listings language file
 ) (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2020/03/24 1.8d (Carsten Heinz)
-) [14] [15]
+) [18] [19]
 Package atveryend Info: Empty hook `BeforeClearDocument' on input line 830.
- [16]
+ [20]
 Package atveryend Info: Empty hook `AfterLastShipout' on input line 830.
  (./Lab1.aux)
 Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 830.
 Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 830.
-
-
-Package rerunfilecheck Warning: File `Lab1.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `Lab1.out':
-(rerunfilecheck)             Before: <no file>
-(rerunfilecheck)             After:  6E7D899F102ADD61E786D44BC9F3403D;2171.
+Package rerunfilecheck Info: File `Lab1.out' has not changed.
+(rerunfilecheck)             Checksum: 6E7D899F102ADD61E786D44BC9F3403D;2171.
  ) 
 Here is how much of TeX's memory you used:
- 18567 strings out of 479284
- 373601 string characters out of 5879641
- 1080605 words of memory out of 5000000
- 35913 multiletter control sequences out of 15000+600000
+ 18345 strings out of 479284
+ 370558 string characters out of 5879641
+ 1081044 words of memory out of 5000000
+ 35701 multiletter control sequences out of 15000+600000
  536723 words of font info for 84 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 55i,6n,120p,813b,1715s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 55i,6n,120p,813b,1500s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on Lab1.pdf (18 pages).
+Output written on Lab1.pdf (22 pages).
