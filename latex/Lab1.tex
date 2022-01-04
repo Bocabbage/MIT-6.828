@@ -9,6 +9,26 @@
 
 \graphicspath{ {./pics/} }
 
+% ---- Conf ----
+\usepackage{xparse}
+\usepackage{tcolorbox}
+\usepackage{mdframed}
+
+\tcbuselibrary{breakable}
+\NewDocumentCommand{\exercise}{ m +m }{
+    {
+        \edef\originalParIndent{\the\parindent}
+        \begin{tcolorbox}[breakable,arc=0mm,boxrule=0.8pt]
+            \setlength{\parindent}{\originalParIndent}
+            \noindent
+            \textbf{\large Exercise #1}
+            \indent
+            #2
+        \end{tcolorbox}
+    }
+}
+
+
 % ---- Code Section Style ----
 \colorlet{mygray}{black!30}
 \colorlet{mygreen}{green!60!blue}
@@ -138,18 +158,19 @@
 寄存器 CS/DS/EX 分别为代码段、数据段及额外段寄存器，当指令中未指定段地址时默认使用这三个寄存器
 内的值。具体情况根据CPU运行于实模式(Real Mode)或保护模式(Protect Mode)而不同，将在后文详述。 \par
 
-\subsection{\large Exercise 1}
-\textsl{ Familiarize yourself with the assembly language materials.
-         You don't have to read them now, but you'll almost certainly 
-         want to refer to some of this material
-         when reading and writing x86 assembly.} \par
-\quad \par
+\exercise{1}{
+    \par{  Familiarize yourself with the assembly language materials.
+           You don't have to read them now, but you'll almost certainly 
+           want to refer to some of this material
+           when reading and writing x86 assembly.} \par
+}
+
 本节内容是对x86体系及其汇编的熟悉练习。6.828 Ref 中提供了x86的手册，其中比较重要的查阅内容为
  \textsl{Volume 3A: System Programming Guide PART I} 一册，该册对IA32的架构有简单的介绍，并对
 硬件与软件之间的约定有明确的描述。\par 
 \quad \par
 {
-\includegraphics[width=\textwidth,height=0.78\textheight]{IA32-syslevel}
+\includegraphics[width=\textwidth,height=0.7\textheight]{IA32-syslevel}
 }
 \quad \par
 \section[\large Simulating the x86]{Simulating the x86}
@@ -184,12 +205,15 @@ PC的启动流程基本可以概括为：1.CPU正常启动；2.读取并运行BI
 不同的BIOS基本功能都包括上电自检(Power On Self Test, POST)及主板设备的初始化。
 BIOS系统按照一定顺序从硬盘或USB存储设备/网络上寻找操作系统，并从第一个扇区中找到BootLoader，将控制
 交给它，开始对内核的加载。\par 
-
-\subsection{\large Exercise 2}
-\textsl{Use GDB's si (Step Instruction) command
-         to trace into the ROM BIOS for a few more instructions, 
-         and try to guess what it might be doing. } \par 
 \quad \par 
+
+\exercise{2}{
+    \par{  Use GDB's si (Step Instruction) command
+           to trace into the ROM BIOS for a few more instructions, 
+           and try to guess what it might be doing.
+        } \par
+}
+
 这个Exercise是探究BIOS执行的指令及作用。BIOS基本功能我们在本节中已阐述，具体的命令
 属于dirty knowledge，此处不展开详细讨论。详细的分析指出此处 BIOS主要进行中断描述表的设置、
 初始化设备、\textbf{寻找可以加载的设备并读取其Boot Loader，将控制权交给它}。Boot Loader 相关内容
@@ -242,17 +266,19 @@ LDT与GDT拥有相同的结构和类似的功能，两者的区别在于：GDT�
         加载到物理内存中。
 } \par 
 
-\subsection{\large Exercise 3}
-\textsl{
+\quad \par 
+
+\exercise{3}{
+    \par{  
         Set a breakpoint at address 0x7c00, 
         which is where the boot sector will be loaded. 
         Continue execution until that breakpoint. 
         Trace through the code in boot/boot.S 
         and compare the original boot loader source code with 
         both the disassembly in obj/boot/boot.asm and GDB.
-} \par 
+        } \par
 
-\textsl{
+        {
         Trace into bootmain() in boot/main.c, and then into readsect(). 
         Identify the exact assembly instructions that correspond to each of the statements in readsect(). 
         Trace through the rest of readsect() and back out into bootmain(), and identify the begin and end of the for loop 
@@ -260,27 +286,35 @@ LDT与GDT拥有相同的结构和类似的功能，两者的区别在于：GDT�
         Find out what code will run when the loop is finished, 
         set a breakpoint there, and continue to that breakpoint. 
         Then step through the remainder of the boot loader.
-} \par
-\quad \par
-\textsl{
-        Be able to answer the following questions:
-} \par
-{
-        1. At what point does the processor start executing 32-bit code? 
-        What exactly causes the switch from 16- to 32-bit mode?
-} \par
-{
-        2. What is the last instruction of the boot loader executed, 
-        and what is the first instruction of the kernel it just loaded?
-} \par
-{
-        3. Where is the first instruction of the kernel?
-} \par 
-{
-        4. How does the boot loader decide how many sectors 
-        it must read in order to fetch the entire kernel from disk? 
-        Where does it find this information?
-} \par 
+        } \par 
+
+        \quad \par
+        \noindent \textbf{
+                Be able to answer the following questions:
+        } \par
+
+        \begin{itemize}
+        \item[1.] {
+                At what point does the processor start executing 32-bit code? 
+                What exactly causes the switch from 16- to 32-bit mode?
+        } 
+        \item[2.] {
+                What is the last instruction of the boot loader executed, 
+                and what is the first instruction of the kernel it just loaded?
+        } 
+        \item[3.] {
+                Where is the first instruction of the kernel?
+        } 
+        \item[4.] {
+                How does the boot loader decide how many sectors 
+                it must read in order to fetch the entire kernel from disk? 
+                Where does it find this information?
+        } \par
+        \quad \par 
+        \end{itemize}
+}
+
+
 \quad \par
 根据题目的要求我们单步调试并追踪 0x7c00 开始后的代码（即BootLoader），并根据追踪内容回答上述问题：\par 
 {
@@ -301,75 +335,32 @@ LDT与GDT拥有相同的结构和类似的功能，两者的区别在于：GDT�
 {
         4. 可以从 ELF 文件中得知（ELFHDR->e\_phnum）。
 } \par 
+\quad \par 
 
-% 这个Exercise让我们追踪从0x7c00开始的代码（即BootLoader），并比较调试命令与 boot.asm（BootLoader反汇编结果）。
-% 通过比较我们可以发现，反汇编文件中给出的命令地址与GDB调试时产生的地址是相同的：这说明，Boot部分的逻辑地址与虚拟地址是相同的。
-% 我们可以通过OBJDUMP工具进行验证：
-% \lstset{style=AssemblyStyle}
-% \setmainfont{Consolas}
-% \begin{lstlisting}
-% # objdump -h obj/boot/boot.out
-% boot.out:     file format elf32-i386
 
-% Sections:
-% Idx Name          Size      VMA       LMA       File off  Algn
-%   0 .text         0000017e  00007c00  00007c00  00000054  2**2
-%                   CONTENTS, ALLOC, LOAD, CODE
-%   1 .eh_frame     000000cc  00007d80  00007d80  000001d4  2**2
-%                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-%   2 .stab         000006d8  00000000  00000000  000002a0  2**2
-%                   CONTENTS, READONLY, DEBUGGING
-%   3 .stabstr      000007df  00000000  00000000  00000978  2**0
-%                   CONTENTS, READONLY, DEBUGGING
-%   4 .comment      00000011  00000000  00000000  00001157  2**0
-%                   CONTENTS, READONLY
-% \end{lstlisting}
-% \setmainfont{Times New Roman}
-% 这与Kernel部分是不同的：
-% \lstset{style=AssemblyStyle}
-% \setmainfont{Consolas}
-% \begin{lstlisting}
-% # objdump -h obj/kern/kernel
-% kernel:     file format elf32-i386
+\exercise{4}{
+    \par{ 
+        Read about programming with pointers in C.
+    }
 
-% Sections:
-% Idx Name          Size      VMA       LMA       File off  Algn
-%   0 .text         00004eae  f0100000  00100000  00001000  2**2
-%                   CONTENTS, ALLOC, LOAD, READONLY, CODE
-%   1 .rodata       00001720  f0104ec0  00104ec0  00005ec0  2**5
-%                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-%   2 .stab         000089b9  f01065e0  001065e0  000075e0  2**2
-%                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-%   3 .stabstr      00009d41  f010ef99  0010ef99  0000ff99  2**0
-%                   CONTENTS, ALLOC, LOAD, READONLY, DATA
-%   4 .data         000c9f51  f0119000  00119000  0001a000  2**12
-%                   CONTENTS, ALLOC, LOAD, DATA
-%   5 .bss          00000ef4  f01e2f60  001e2f60  000e3f60  2**5
-%                   CONTENTS, ALLOC, LOAD, DATA
-%   6 .comment      00000011  00000000  00000000  000e4e54  2**0
-%                   CONTENTS, READONLY
-% \end{lstlisting}
-% \setmainfont{Times New Roman}
+} 
 
-\subsection{Exercise 4}
-\textsl{Read about programming with pointers in C.}\par 
-\quad \par
 阅读任务，略。
+\quad \par 
 
-\subsection{Exercise 5}
-\textsl{Trace through the first few instructions of the boot loader again 
+\exercise{5}{
+    \par{ 
+        Trace through the first few instructions of the boot loader again 
         and identify the first instruction that would "break" or otherwise 
         do the wrong thing if you were to get the boot loader's link address wrong.
         Then change the link address in boot/Makefrag to something wrong, 
         run make clean, recompile the lab with make, and trace into the boot loader again 
         to see what happens. 
-        Don't forget to change the link address back and make clean again afterward!} \par 
-\quad \par 
-% 修改MakeFlag文件中BootLoader的链接地址(0x7c00)，再追踪出现bug的指令。由于BIOS对BootLoader加载的位置
-% 是硬编码的，因此实际上BootLoader仍加载到了0x7c00处，并跳转到此处进行。因此理论上，BIOS可以顺利地将控制转交给
-% BootLoader。问题出现在链接地址的改变对BootLoader链接时重定向的改变：当链接器根据修改后的链接地址重定向后，
-% 如源码中的 lgdt 和 ljmp 命令的操作数都将出现问题。lgdt 命令处出现问题，但JOS依然成功加载了GDT，最后是在 ljmp 指令处
-% 发生了错误。
+        Don't forget to change the link address back and make clean again afterward!
+    }
+
+} 
+
 根据Lab的提示，我们修改 boot/Makefrag 中的 -Ttext 选项：从 0x7c00 改为 0x1000。再次使用 GDB 进行单步调试，
 可以发现 BootLoader 被正常加载，并在初始化的部分均可以正常执行，直到运行至前面提到的实模式切换到保护模式的
  ljmp 语句时出现问题：无法跳转。 \par
@@ -381,11 +372,15 @@ LDT与GDT拥有相同的结构和类似的功能，两者的区别在于：GDT�
 \includegraphics[width=0.8\textwidth]{cantJmp}
 \quad \par 
 
-\subsection{Exercise 6}
-\textsl{Examine the 8 words of memory at 0x00100000 at the point the BIOS enters the boot loader, 
+\exercise{6}{
+    \par{ 
+        Examine the 8 words of memory at 0x00100000 at the point the BIOS enters the boot loader, 
         and then again at the point the boot loader enters the kernel. Why are they different? 
-        What is there at the second breakpoint?} \par 
-\quad \par
+        What is there at the second breakpoint?
+    }
+
+} 
+
 在BIOS引导进入boot loader前，0x0010000处内容为空；
 进入kernel前，0x0010000处已经有了内容，前后的区别在于kernel被加载进来了。
 
@@ -415,12 +410,16 @@ Breakpoint 2 at 0x7d81
 而Kernel则不同，它会将自己映射到32-bit物理地址空间的高位：以JOS为例，它将内核映射到 0xf0100000 虚拟地址处。
 由于许多PC并不具有如此大的物理内存，因此会选择将高位虚拟地址映射到低位物理地址。 \par 
 JOS在启动真正的分页服务前，会使用 kern/entrypgdir.c 进行初映射，将高位/低位的4MB虚拟地址全部映射到低位4MB物理地址。
+\quad \par 
 
-\subsection{\large Exercise 7}
-\textsl{Use QEMU and GDB to trace into the JOS kernel and stop at the movl \%eax, \%cr0. 
+\exercise{7}{
+    \par{ 
+        Use QEMU and GDB to trace into the JOS kernel and stop at the movl \%eax, \%cr0. 
         Examine memory at 0x00100000 and at 0xf0100000. Now, single step over that instruction 
-        using the stepi GDB command. Again, examine memory at 0x00100000 and at 0xf0100000.} \par 
-\quad \par
+        using the stepi GDB command. Again, examine memory at 0x00100000 and at 0xf0100000.
+    }
+
+} 
 \textbf{设置CR0寄存器的PG位后，处理器进入分页模式（见IA32-3A）}，运行上述命令后 entrypgdir.c 设置的分页生效。
 查看 \textsl{kernel.asm} 文件得到设置 CR0 寄存器的指令（链接）地址为 0xf0100025，且此时 CPU 的分页功能
 尚未生效，故实际指令地址应为 0x100025。设置断点，查看GDB前后差异，发现设置前 0xf010000 处无内容，设置后与 0x100000 
@@ -434,7 +433,7 @@ JOS在启动真正的分页服务前，会使用 kern/entrypgdir.c 进行初映�
 本节内容结合Question及Exercise 8来展开。\par
 \textsl{注：cprintf 与 printf 的区别在于后者可以被重定向到输出屏幕之外的位置（标准输出流），前者只能输出到控制台。} \par 
 
-
+\newpage
 \subsection{\large Question}
 \textsl{1. Explain the interface between printf.c and console.c. 
         Specifically, what function does console.c export? 
@@ -517,13 +516,17 @@ y并没有指定参数，故非固定值。实际情况是，指令将从栈中�
         it would still be possible to pass it a variable number of arguments?} \par
 \quad \par 
 将变长数组参数与格式串参数位置进行调换即可。
-
-
-\subsection{\large Exercise 8}
-\textsl{We have omitted a small fragment of code - 
-        the code necessary to print octal numbers using patterns of the form 
-        "\%o". Find and fill in this code fragment.} \par
 \quad \par 
+
+\exercise{8}{
+    \par{ 
+        We have omitted a small fragment of code - 
+        the code necessary to print octal numbers using patterns of the form 
+        "\%o". Find and fill in this code fragment.
+    }
+
+} 
+
 根据前文对打印函数体系调用结构的分析得知需修改 printfmt.c/vprintfmt() 函数。
 因此我们在其中加入处理八进制的分支，仿照处理十六进制的分支进行补充：
 \lstset{style=CStyle}
@@ -539,13 +542,17 @@ case 'o':
 \section[\large The Stack]{The Stack}
 本节的内容主要关于C程序对x86的栈使用，并讨论了JOS的内核栈相关内容。\par 
 
-\subsection{\large Exericse 9}
-\textsl{Determine where the kernel initializes its stack, 
+
+\exercise{9}{
+    \par{ 
+        Determine where the kernel initializes its stack, 
         and exactly where in memory its stack is located. 
         How does the kernel reserve space for its stack? 
         And at which "end" of this reserved area 
-        is the stack pointer initialized to point to?} \par
-\quad \par 
+        is the stack pointer initialized to point to?
+    }
+
+} 
 内核在 kern/entry.S 中的一行代码初始化了内核栈：
 \lstset{style=AssemblyStyle}
 \setmainfont{Consolas}
@@ -582,12 +589,17 @@ bootstacktop:
 当C程序发生函数调用时，它会将当前函数的EBP寄存器值入栈，并将当前ESP值复制到EBP寄存器中。有了这一规则的补充，
 我们可以利用栈对调用链进行回溯。\par 
 
-\subsection{\large Exercise 10}
-\textsl{To become familiar with the C calling conventions on the x86, 
+\exercise{10}{
+    \par{ 
+        To become familiar with the C calling conventions on the x86, 
         find the address of the test\_backtrace function in obj/kern/kernel.asm, 
         set a breakpoint there, and examine what happens each time it gets called after the kernel starts. 
         How many 32-bit words does each recursive nesting level of test\_backtrace push on the stack, 
-        and what are those words?} \par
+        and what are those words?
+    }
+
+} 
+
 \quad \par 
 这个练习的目的是帮助我们了解C程序的过程调用规则。我们设置断点对 test\_backtrace 进行跟踪。
 这个函数将递归调用自己，每次被调用时，参数都将减一。根据步进调试，我们可以得到该函数调用的流程：\par
@@ -621,7 +633,14 @@ EBP实现。在早期x86代码中，每个函数都使用帧指针。如今只�
 \includegraphics[width=\textwidth]{StackFrame}
 
 \newpage
-\subsection{\large Exercise 11}
+
+\exercise{11}{
+    \par{ 
+                Implement the backtrace function as specified above. 
+                Use the same format as in the example, since otherwise the grading script will be confused.
+        } 
+        
+}
 
 \lstset{style=AssemblyStyle}
 \setmainfont{Consolas}
@@ -629,14 +648,12 @@ EBP实现。在早期x86代码中，每个函数都使用帧指针。如今只�
 # The backtrace function should display a listing of function call frames in the following format:
 
 Stack backtrace:
-    ebp f0109e58  eip f0100a62  args 00000001 f0109e80 f0109e98 f0100ed2 00000031
-    ebp f0109ed8  eip f01000d6  args 00000000 00000000 f0100058 f0109f28 00000061
+ebp f0109e58  eip f0100a62  args 00000001 f0109e80 f0109e98 f0100ed2 00000031
+ebp f0109ed8  eip f01000d6  args 00000000 00000000 f0100058 f0109f28 00000061
 ...
 \end{lstlisting}
-\setmainfont{Times New Roman}
 
-\textsl{Implement the backtrace function as specified above. 
-        Use the same format as in the example, since otherwise the grading script will be confused.} \par
+
 \quad \par 
 这是要求我们实现backtrace功能，其原理依据正是我们上文对栈帧结构的分析。
 实际需要填写的函数是 mon\_backtrace，并可以使用 read\_rbp() 接口获得EBP寄存器的值。
@@ -675,12 +692,18 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 
 
-\newpage
-\subsection{\large Exercise 12}
-\textsl{Modify your stack backtrace function to display, 
+\exercise{12}{
+    \par{ 
+        Modify your stack backtrace function to display, 
         for each eip, the function name, source file name, 
-        and line number corresponding to that eip.} \par
-\textsl{Q: In debuginfo\_eip, where do \_\_STAB\_* come from?} \par 
+        and line number corresponding to that eip.
+} \par 
+
+        \textsl{Q: In debuginfo\_eip, where do \_\_STAB\_* come from?} \par 
+
+} 
+
+
 
 \quad \par 
 这个Exericse要求我们利用符号表信息进一步增加backtrace的功能。根据提示，我们可以利用 
