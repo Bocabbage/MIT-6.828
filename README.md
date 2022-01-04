@@ -7,7 +7,6 @@
 -  其他参考内容：
    - [NJU Operating System](https://www.bilibili.com/video/BV1N741177F5)
    - [Operating System: Three Easy Pieces](http://pages.cs.wisc.edu/~remzi/OSTEP/)
-   - 
 
 
 
