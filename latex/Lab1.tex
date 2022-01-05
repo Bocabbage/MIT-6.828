@@ -222,7 +222,7 @@ BIOS系统按照一定顺序从硬盘或USB存储设备/网络上寻找操作系
 
 \chapter[\Large The Boot Loader]{The Boot Loader}
 \section[\large Loading the Kernel I: boot.S]{Loading the Kernel I: boot.S}
-BIOS在找到可启动的设备后，会将设备中第一个扇区（512KB）的内容加载到 0x7c00 位置，
+BIOS在找到可启动的设备后，会将设备中第一个扇区（512Bytes）的内容加载到 0x7c00 位置，
 并跳转至此处运行。这一个扇区中的代码一般用于将OS加载到内存中，称之为\textsl{加载器(BootLoader)}。
 JOS的BootLoader源码由 boot/boot.S 及 boot/main.c 两部分组成。 \par
 
