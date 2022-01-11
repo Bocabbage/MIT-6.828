@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  5 JAN 2022 12:19
+This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  11 JAN 2022 15:50
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -718,26 +718,26 @@ Package fontspec Info: Font family 'TimesNewRoman(0)' created for font 'Times
  (./Lab2.aux)
 \openout1 = `Lab2.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
-LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 113.
-LaTeX Font Info:    ... okay on input line 113.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 127.
+LaTeX Font Info:    ... okay on input line 127.
 
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
@@ -774,9 +774,9 @@ LaTeX Font Info:    ... okay on input line 113.
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
 ABD: EverySelectfont initializing macros
-LaTeX Info: Redefining \selectfont on input line 113.
+LaTeX Info: Redefining \selectfont on input line 127.
 \AtBeginShipoutBox=\box74
-Package hyperref Info: Link coloring ON on input line 113.
+Package hyperref Info: Link coloring ON on input line 127.
  (c:/Softwares/texlive/2020/texmf-dist/tex/latex/hyperref/nameref.sty
 Package: nameref 2019/09/16 v2.46 Cross-referencing by name of section
  (c:/Softwares/texlive/2020/texmf-dist/tex/latex/refcount/refcount.sty
@@ -786,9 +786,9 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 )
 \c@section@level=\count325
 )
-LaTeX Info: Redefining \ref on input line 113.
-LaTeX Info: Redefining \pageref on input line 113.
-LaTeX Info: Redefining \nameref on input line 113.
+LaTeX Info: Redefining \ref on input line 127.
+LaTeX Info: Redefining \pageref on input line 127.
+LaTeX Info: Redefining \nameref on input line 127.
  (./Lab2.out) (./Lab2.out)
 \@outlinefile=\write6
 \openout6 = `Lab2.out'.
@@ -796,9 +796,9 @@ LaTeX Info: Redefining \nameref on input line 113.
 \c@lstlisting=\count326
  ABD: EveryShipout initializing macros
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <14.4> on input line 116.
+(Font)              <14.4> on input line 130.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <7> on input line 116.
+(Font)              <7> on input line 130.
  [1
 
 ] (./Lab2.toc
@@ -816,6 +816,8 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 
 ]
 Chapter 1.
+File: ./pics/layout-of-vapa.png Graphic file (type bmp)
+<./pics/layout-of-vapa.png>
 [1
 
 ] (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
@@ -843,17 +845,12 @@ Package fontspec Info: Font family 'Consolas(0)' created for font 'Consolas'
 (fontspec)             <->"Consolas/BI/OT:script=latn;language=dflt;mapping=tex-text;"
 (fontspec)             - 'bold italic small caps'  (b/scit) with NFSS spec.: 
 
- [2] [3] [4]
-Overfull \hbox (6.47026pt too wide) in paragraph at lines 290--297
-[]\TU/SimSun(0)/m/n/12 实 现 了 \TU/TimesNewRoman(0)/m/n/12 pages \TU/SimSun(0)/m/n/12 及 \TU/TimesNewRoman(0)/m/n/12 page_free_list \TU/SimSun(0)/m/n/12 的 初 始 化 后，|  就 可 以 进 一 步 实 现 分 配 和 回 收 页 的 函 数：| \TU/TimesNewRoman(0)/b/n/12 page_alloc
- []
-
-[5]
+ [2] [3] [4] [5]
 Chapter 2.
 LaTeX Font Info:    Font shape `TU/TimesNewRoman(0)/m/sl' in size <12> not available
-(Font)              Font shape `TU/TimesNewRoman(0)/m/it' tried instead on input line 354.
+(Font)              Font shape `TU/TimesNewRoman(0)/m/it' tried instead on input line 361.
 LaTeX Font Info:    Font shape `TU/SimSun(0)/m/sl' in size <12> not available
-(Font)              Font shape `TU/SimSun(0)/m/it' tried instead on input line 354.
+(Font)              Font shape `TU/SimSun(0)/m/it' tried instead on input line 361.
 File: ./pics/AddressTranslationOverview.png Graphic file (type bmp)
 <./pics/AddressTranslationOverview.png>
 [6
@@ -868,21 +865,36 @@ File: lstlang2.sty 2020/03/24 1.8d listings language file
 ) (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang3.sty
 File: lstlang3.sty 2020/03/24 1.8d listings language file
 ) [8]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 431.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 431.
+File: ./pics/pgdirwalk.png Graphic file (type bmp)
+<./pics/pgdirwalk.png>
+ [9] [10] [11] [12]
+Chapter 3.
+File: ./pics/PTE.png Graphic file (type bmp)
+<./pics/PTE.png>
+[13
+
+] [14] (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2020/03/24 1.8d listings language file
+) (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstlang2.sty
+File: lstlang2.sty 2020/03/24 1.8d listings language file
+) (c:/Softwares/texlive/2020/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2020/03/24 1.8d (Carsten Heinz)
+) [15]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 764.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 764.
  (./Lab2.aux)
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 431.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 431.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 764.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 764.
 Package rerunfilecheck Info: File `Lab2.out' has not changed.
-(rerunfilecheck)             Checksum: 4B1BD191ABBBDCFD1A9456BBFA5D09E5;546.
+(rerunfilecheck)             Checksum: A414144A0B9CDE5B8BF3AB28FCE5D52A;860.
  ) 
 Here is how much of TeX's memory you used:
- 27755 strings out of 479284
- 576200 string characters out of 5879641
- 1258024 words of memory out of 5000000
- 44905 multiletter control sequences out of 15000+600000
+ 28085 strings out of 479284
+ 583445 string characters out of 5879641
+ 1260617 words of memory out of 5000000
+ 45229 multiletter control sequences out of 15000+600000
  536715 words of font info for 83 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 59i,6n,120p,813b,1464s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 59i,7n,120p,813b,1464s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on Lab2.pdf (10 pages).
+Output written on Lab2.pdf (17 pages).
