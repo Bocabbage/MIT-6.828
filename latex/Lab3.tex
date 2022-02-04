@@ -139,7 +139,7 @@
 % ---- Part A ---------------------------------
 \newpage
 \pagenumbering{arabic}
-\chapter[\Large Physical Page Management]{User Environments and Exception Handling}
+\chapter[\Large User Environments and Exception Handling]{User Environments and Exception Handling}
 本次Lab的第一部分主要要处理JOS对进程的抽象及异常处理两部分的内容。
 
 \section[\large Environment State]{Environment State}
@@ -525,10 +525,97 @@ Lab 要求我们在 hello 进程中的 int \$0x30 处打断点并执行，再单
 查看 hello.c 与 hello.asm 并结合内核打印的信息我们可以得知该 fault 在打印 "hello world!" 语句时
 发生；检查调用链可知，vcprintf 在调用 sys\_cputs() 时产生了一个 syscall，该 syscall 调用出现问题的 
 int \$0x30 指令。由此我们基本可以确认，这个 fault 是由于缺少处理 syscall 的中断处理程序而产生的。\par
-此外，在此处我们可以通过一个方法来\underline{确认是否真的已经切换到用户态}：在 env\_run 之前使用 gdb 的
-info registers 命令调试，可以看到CS寄存器（可见部分）的值为0x8，故CPL=0x7\&0x3=0；当运行至用户态代码时，
-查看 info registers 可得CS寄存器（可见部分）值为0x1b，故CPL=3，可以发现权限级别确实发生了变化。\par
-\textsl{注：CS寄存器低位存储CPL细节见 IA32-3A Chapter4.5一节。} 
+此处我们还需厘清一个问题是：\underline{JOS是在哪里完成对用户态/内核态的区分的}？也即，我们分配的进程
+在哪里被设置为用户态程序？ \par
+我们知道在 x86 中，一段内容处于 Ring x 记录在当前 CS 寄存器中的 CPL 位，这一位通常与该段内容
+所处段的段选择子 DPL 位相等，因此设置一段内容的 Ring x 权限，必然涉及 GDT 的设置。我们使用 IDE 
+的搜索功能查询 GDT 相关关键字，很快就能找到相关代码：env\_init\_percpu()：\par
+\newpage
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+// Load GDT and segment descriptors.
+void
+env_init_percpu(void)
+{
+    lgdt(&gdt_pd);
+    // The kernel never uses GS or FS, so we leave those set to
+    // the user data segment.
+    asm volatile("movw %%ax,%%gs" : : "a" (GD_UD|3));
+    asm volatile("movw %%ax,%%fs" : : "a" (GD_UD|3));
+    // The kernel does use ES, DS, and SS.  We'll change between
+    // the kernel and user data segments as needed.
+    asm volatile("movw %%ax,%%es" : : "a" (GD_KD));
+    asm volatile("movw %%ax,%%ds" : : "a" (GD_KD));
+    asm volatile("movw %%ax,%%ss" : : "a" (GD_KD));
+    // Load the kernel text segment into CS.
+    asm volatile("ljmp %0,$1f\n 1:\n" : : "i" (GD_KT));
+    // For good measure, clear the local descriptor table (LDT),
+    // since we don't use it.
+    lldt(0);
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+这段代码使用 gdt\_pd 变量的内容更新了当前的GDT，同时设置了当前内核代码的CS，ES，
+DS，SS寄存器为 GD\_KD 段选择子的位置。我们查看 gdt\_pd 的内容：\par
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+struct Segdesc gdt[] =
+{
+    // 0x0 - unused (always faults -- for trapping NULL far pointers)
+    SEG_NULL,
+    // 0x8 - kernel code segment
+    [GD_KT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 0),
+    // 0x10 - kernel data segment
+    [GD_KD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 0),
+    // 0x18 - user code segment
+    [GD_UT >> 3] = SEG(STA_X | STA_R, 0x0, 0xffffffff, 3),
+    // 0x20 - user data segment
+    [GD_UD >> 3] = SEG(STA_W, 0x0, 0xffffffff, 3),
+    // 0x28 - tss, initialized in trap_init_percpu()
+    [GD_TSS0 >> 3] = SEG_NULL
+};
+
+struct Pseudodesc gdt_pd = {
+    sizeof(gdt) - 1, (unsigned long) gdt
+};
+\end{lstlisting}
+\setmainfont{Times New Roman}
+\newpage 
+从上述代码我们就可以看到，新的 GDT 仍然采用 flat-pattern 的方式来忽略分段机制，
+但利用了段选择子的权限位设置实现内核态和用户态的权限区分（内核段为Ring0，代码段为
+Ring3）。所有用户态进程均有内核分配及初始化，因此内核的权限设置工作应当也由内核代码实现。
+同样进行搜索后发现，在分配进程的函数 env\_alloc() 中就进行了相应设置，
+由此我们便可以理解操作系统如何提供运行在Ring3的用户态进程了：\par 
+\quad \par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+int
+env_alloc(struct Env **newenv_store, envid_t parent_id)
+{
+
+...
+    // Set up appropriate initial values for the segment registers.
+	// GD_UD is the user data segment selector in the GDT, and
+	// GD_UT is the user text segment selector (see inc/memlayout.h).
+	// The low 2 bits of each segment register contains the
+	// Requestor Privilege Level (RPL); 3 means user mode.  When
+	// we switch privilege levels, the hardware does various
+	// checks involving the RPL and the Descriptor Privilege Level
+	// (DPL) stored in the descriptors themselves.
+	e->env_tf.tf_ds = GD_UD | 3;
+	e->env_tf.tf_es = GD_UD | 3;
+	e->env_tf.tf_ss = GD_UD | 3;
+	e->env_tf.tf_esp = USTACKTOP;
+	e->env_tf.tf_cs = GD_UT | 3;
+...
+
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
 
 \newpage
 \section[\large Handling Interrupts and Exceptions]{Handling Interrupts and Exceptions}
@@ -548,10 +635,13 @@ info registers 命令调试，可以看到CS寄存器（可见部分）的值为
 \begin{itemize}
     \item[·]\textbf{中断（Interrupts）：}
     分为可屏蔽中断（Maskable Interrupts）与不可屏蔽中断（Nonmaskable Interrupts），
-    前者由CPU的INTR引脚发出信号产生，后者由NMI引脚产生。
+    前者由CPU的INTR引脚发出信号产生，后者由NMI引脚产生。一般来说不可屏蔽中断都由致命错误
+    引发，通常的处理方式不是为其设置 Handler，而是直接发出错误警告终止程序。\par 
+    \underline{一般认为中断信号是异步信号，由CPU外设备产生}。
     \item[·]\textbf{异常（Exceptions）：}
     异常通常分为(1)由CPU自行检测到的异常，会被进一步分类为 trap/fault/abort，例如divide zero异常；
-    (2)还有部分信号是可编程的，例如INT 0x3指令触发，也被称为软中断（Software Interrupts）。
+    (2)还有部分信号是可编程的，例如INT 0x3指令触发，也被称为软中断（Software Interrupts）。\par
+    与中断相对的，\underline{异常信号通常为同步信号}，即由当前CPU运行中的代码产生的。
 \end{itemize}
 
 \subsection{\large Enabling and Disabling Interrupts}
@@ -570,5 +660,39 @@ info registers 命令调试，可以看到CS寄存器（可见部分）的值为
     80386架构会禁止NMI、INTR及异常中断，仅有page fault与general protection fault会发生。
     \underline{改为使用LSS指令可以避开这个问题处理}。
 \end{itemize}
+
+\newpage
+\section[\large Basics of Protected Control Transfer]{Basics of Protected Control Transfer}
+为实现从用户态到内核态切换的同时保证对用户态可执行内容的限制，
+x86提供了两种机制：{\bf 中断向量表（Interrupt Descriptor Table, IDT）}及
+{\bf 任务状态段（Task State Segment, TSS）}。\par 
+\subsection{\large Interrupt Description Table (IDT)}
+IDT的形式与GDT类似，地址存储在专门的寄存器 IDTR 中。IDT提供一个256 entries的表记录
+处理不同类型中断/异常的函数入口，当异常发生时调用对应的函数（加载handler的EIP/CS）。
+IDT中包含三种不同的表项，如下图所示：\par 
+{
+\centering
+\includegraphics[width=0.7\textwidth]{IDTD} \par
+}
+\quad \par 
+
+\subsection{\large Task State Segment (TSS)}
+当调用中断处理程序时，需要我们保存当前执行流的现场以便完成异常处理后恢复执行。
+而且应当注意的是，执行流现场必须保存到高特权级的位置，否则可能遭到其他用户态带
+bug或恶意的代码的影响。\par 
+当发生中断/异常且handler向更高特权级转换时，x86会切换当前使用的栈到高特权级栈
+（内核栈）。同时，x86定义了 TSS 作为保存现场的数据结构，发生异常时将记录执行流相关信息
+的TSS压入内核栈中。\par 
+TSS结构保存着大量信息，JOS仅使用 ESP0 及 SS0 两个域，用于指定切换的内核栈位置。
+\underline{TSS的地址被保存在TR寄存器中，可以通过LTR/STR指令进行操作}。JOS在trap\_init\_percpu()
+中执行了TSS段的初始化加载。
+
+\newpage
+\section[\large Types of Exceptions and Interrupts]{Types of Exceptions and Interrupts}
+在x86中，所有的（同步）异常被分配到 0~31 号中断向量上，即IDT的前32个entries，例如 page-fault 就使用
+14号中断向量。\par
+大于31号的中断向量被用于处理软件中断，可能的来源是int指令发送的中断及外部设备中断等异步中断。
+在Lab3中，我们会实现JOS对0-31号所有同步异常处理入口的设置以及系统调用中断的设置（JOS使用了
+中断号0x30，这个选择是可任意的）；在Lab4中会进一步拓展至可以处理时钟中断等外部中断。
 
 \end{document}

@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  28 JAN 2022 15:32
+This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  5 FEB 2022 00:18
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -862,22 +862,25 @@ File: ./pics/ELF.png Graphic file (type bmp)
  [6] [7] [8]
 File: ./pics/hellofault.png Graphic file (type bmp)
 <./pics/hellofault.png>
- [9] [10]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 574.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 574.
+ [9] [10] [11] [12]
+File: ./pics/IDTD.png Graphic file (type bmp)
+<./pics/IDTD.png>
+ [13] [14]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 698.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 698.
  (./Lab3.aux)
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 574.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 574.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 698.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 698.
 Package rerunfilecheck Info: File `Lab3.out' has not changed.
-(rerunfilecheck)             Checksum: CA97DDBD17F07777EE7EA2116F58808A;1000.
+(rerunfilecheck)             Checksum: 4228AA31510402CCE090296710AEB4A3;1568.
  ) 
 Here is how much of TeX's memory you used:
- 27713 strings out of 479284
- 582984 string characters out of 5879641
- 1247049 words of memory out of 5000000
- 44865 multiletter control sequences out of 15000+600000
+ 27797 strings out of 479284
+ 584912 string characters out of 5879641
+ 1247149 words of memory out of 5000000
+ 44949 multiletter control sequences out of 15000+600000
  536723 words of font info for 84 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  59i,6n,95p,813b,1066s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on Lab3.pdf (12 pages).
+Output written on Lab3.pdf (16 pages).
