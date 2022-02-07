@@ -80,8 +80,8 @@
 
 - **Homework**
   * [x] HW1: Boot xv6
-  * [ ] HW2: Shell
-  * [ ] HW3: System Calls
+  * [x] HW2: Shell
+  * [x] HW3: System Calls
   * [ ] HW4: Lazy Page Allocation
   * [ ] HW5: xv6 CPU alarm
   * [ ] HW6: Multithreaded Programming

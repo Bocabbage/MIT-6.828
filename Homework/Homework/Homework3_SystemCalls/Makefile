@@ -1,4 +1,3 @@
-# Modified by Zhuofan Zhang at 2020/3/26
 OBJS = \
 	bio.o\
 	console.o\
@@ -182,7 +181,8 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
-	_date\
+	_date
+# Add for 6.828 homework3
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -238,10 +238,6 @@ qemu-nox: fs.img xv6.img
 qemu-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
-
-# Add by Zhuofan Zhang at 2020/3/26
-gdb:
-	gdb -n -x .gdbinit
 
 qemu-nox-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2

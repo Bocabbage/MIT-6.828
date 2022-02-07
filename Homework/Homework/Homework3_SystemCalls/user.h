@@ -23,7 +23,7 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-// For Homework3 Part2
+// Add for 6.828 homework3
 int date(struct rtcdate*);
 
 // ulib.c

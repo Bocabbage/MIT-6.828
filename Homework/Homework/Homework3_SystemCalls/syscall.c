@@ -1,6 +1,3 @@
-/*
-  Modified date: 2020/4/4
-*/
 #include "types.h"
 #include "defs.h"
 #include "param.h"
@@ -9,8 +6,6 @@
 #include "proc.h"
 #include "x86.h"
 #include "syscall.h"
-
-
 
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
@@ -108,8 +103,7 @@ extern int sys_unlink(void);
 extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
-
-// For Homework3 Part2
+// Add for 6.828 homework3
 extern int sys_date(void);
 
 static int (*syscalls[])(void) = {
@@ -134,12 +128,13 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
-// For Homework3 Part2
+// Add for 6.828 homework3
 [SYS_date]    sys_date,
 };
 
-// For Homework3 Part1
-// static char* syscalls_name[] = {
+// Add for 6.828 homework3
+// static char* syscalls_name[] = 
+// {
 // [SYS_fork]    "fork",
 // [SYS_exit]    "exit",
 // [SYS_wait]    "wait",
@@ -150,7 +145,7 @@ static int (*syscalls[])(void) = {
 // [SYS_fstat]   "fstat",
 // [SYS_chdir]   "chdir",
 // [SYS_dup]     "dup",
-// [SYS_getpid]  "get_pid",
+// [SYS_getpid]  "getpid",
 // [SYS_sbrk]    "sbrk",
 // [SYS_sleep]   "sleep",
 // [SYS_uptime]  "uptime",
@@ -171,8 +166,8 @@ syscall(void)
 
   num = curproc->tf->eax;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    // Add for 6.828 homework3
     curproc->tf->eax = syscalls[num]();
-    // For Homework3 Part1
     // cprintf("%s -> %d\n", syscalls_name[num], curproc->tf->eax);
   } else {
     cprintf("%d %s: unknown sys call %d\n",

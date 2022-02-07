@@ -21,5 +21,5 @@
 #define SYS_mkdir  20
 #define SYS_close  21
 
-// For Homework3 Part2
+// Add for 6.828 homework3
 #define SYS_date 22

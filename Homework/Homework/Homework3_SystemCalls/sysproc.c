@@ -90,12 +90,14 @@ sys_uptime(void)
   return xticks;
 }
 
-// For Homework3 Part2
+// Add for 6.828 homework3
 int
 sys_date(void)
 {
-  struct rtcdate *r;
-  if (argptr(0, (char **) &r, sizeof(struct rtcdate)) < 0)
+  struct rtcdate *now_date;
+  if(argptr(0, (char **)(&now_date), sizeof(struct rtcdate)) < 0)
     return -1;
-  return date(r);
+  cmostime(now_date);
+
+  return 0;
 }

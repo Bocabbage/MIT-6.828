@@ -5,17 +5,24 @@
 int
 main(int argc, char *argv[])
 {
-    struct rtcdate r;
+  struct rtcdate r;
 
-    if(date(&r))
-    {
-        printf(2, "date failed.\n");
-        exit();
-    }
-
-    printf(1, "%d/%d/%d %d:%d:%d \n",
-           r.year, r.month, r.day,
-           r.hour, r.minute, r.second);
-
+  if (date(&r)) {
+    printf(2, "date failed\n");
     exit();
+  }
+
+  // your code to print the time in any format you like...
+  printf(
+      1,
+      "%dY%dM%dD: %dH%dM%dS\n",
+      r.year,
+      r.month,
+      r.day,
+      r.hour,
+      r.minute,
+      r.second
+  );
+
+  exit();
 }
