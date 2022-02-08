@@ -14,3 +14,5 @@
 \contentsline {subsection}{\large Interrupt Description Table (IDT)}{13}{section*.9}%
 \contentsline {subsection}{\large Task State Segment (TSS)}{13}{section*.10}%
 \contentsline {section}{\numberline {1.6}\large Types of Exceptions and Interrupts}{14}{section.1.6}%
+\contentsline {section}{\numberline {1.7}\large Nested Exceptions and Interrupts}{15}{section.1.7}%
+\contentsline {section}{\numberline {1.8}\large Setting Up the IDT}{15}{section.1.8}%

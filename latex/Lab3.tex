@@ -689,10 +689,165 @@ TSS结构保存着大量信息，JOS仅使用 ESP0 及 SS0 两个域，用于指
 
 \newpage
 \section[\large Types of Exceptions and Interrupts]{Types of Exceptions and Interrupts}
-在x86中，所有的（同步）异常被分配到 0~31 号中断向量上，即IDT的前32个entries，例如 page-fault 就使用
+在x86中，所有的（同步）异常被分配到 0-31 号中断向量上，即IDT的前32个entries，例如 page-fault 就使用
 14号中断向量。\par
 大于31号的中断向量被用于处理软件中断，可能的来源是int指令发送的中断及外部设备中断等异步中断。
 在Lab3中，我们会实现JOS对0-31号所有同步异常处理入口的设置以及系统调用中断的设置（JOS使用了
 中断号0x30，这个选择是可任意的）；在Lab4中会进一步拓展至可以处理时钟中断等外部中断。
+x86中发射中断向量的指令是\underline{int n 指令}，它完成以下任务：\par
+\begin{itemize}
+    \item[·]根据索引n在IDT中找到处理函数的入口； \par
+    \item[·]检查CS寄存器的权限位（CPL）； \par
+    \item[·]将当前ESP寄存器及SS寄存器存放入CPU内部空闲寄存器； \par
+    \item[·]从TSS中加载\underline{内核栈}的ESP寄存器及SS寄存器； \par
+    \item[·]将原有的ESP寄存器、SS寄存器（两者当前暂时存放于CPU其他寄存器中）等入\underline{内核栈}； \par
+    \item[·]将EFLAGS寄存器、当前进程的CS寄存器及IP寄存器入（内核栈）；\par
+    \item[·]将CPU控制交给处理函数（处理函数负责调用 iret 命令从中断处理中返回）。 \par
+\end{itemize}
+到这里，int 指令已经完成了填充内核栈信息的一部分工作，内核栈内容如下图所示：\par 
+\quad \par 
+{
+\centering
+\includegraphics[width=0.7\textwidth]{interrupt_kstack} \par
+}
+
+为进一步填充完整信息（形成TrapFrame），trap 入口函数提供进一步操作，如下图所示。
+JOS的做法是在每个入口函数将 trapno 入栈后，统一进入 \_alltrap 函数处理（Exercise 4内容）。\par 
+\newpage
+{
+\centering
+\includegraphics[width=0.7\textwidth]{trap_frame} \par
+}
+
+
+
+\section[\large Nested Exceptions and Interrupts]{Nested Exceptions and Interrupts}
+当已经处于内核态时，也可以继续嵌套处理中断和异常，
+此时会在内核栈中继续装填处理帧，唯一不同的是不会再将SS和ESP寄存器入栈。\par
+
+
+\section[\large Setting Up the IDT]{Setting Up the IDT}
+\exercise{4}{
+        \par 
+        {
+            Edit trapentry.S and trap.c and implement the features described above. 
+            The macros \textbf{TRAPHANDLER} and \textbf{TRAPHANDLER\_NOEC} in trapentry.S 
+            should help you, as well as the T\_\* defines in inc/trap.h. 
+            You will need to add an entry point in trapentry.S 
+            (using those macros) for each trap defined in inc/trap.h, 
+            and you'll have to provide \_alltraps which 
+            the TRAPHANDLER macros refer to. 
+            You will also need to modify trap\_init() to initialize 
+            the idt to point to each of these entry points 
+            defined in trapentry.S; 
+            the \textbf{SETGATE} macro will be helpful here.
+        } \par
+        {
+            Test your trap handling code using 
+            some of the test programs in the user directory 
+            that cause exceptions before making any system calls, 
+            such as user/divzero. 
+            You should be able to get make grade to succeed 
+            on the divzero, softint, and badsegment tests 
+            at this point.
+        } \par
+}
+\quad \par 
+
+Part A最后一部分要求修改 trapentry.S 及 trap.c 文件，对IDT进行初始化。 
+trapentry.S 提供了两个宏： TRAPHANDLER与TRAPHANDLER\_NOEC 用于生成处理函数入口
+（与xv6中的 vectors.pl 功能相近）。设置代码如下： 
+\lstset{style=AssemblyStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+/*
+* Lab 3: Your code here for generating entry points for the different traps.
+*/
+TRAPHANDLER_NOEC(DIVIDE, T_DIVIDE)
+TRAPHANDLER_NOEC(DEBUG, T_DEBUG)
+TRAPHANDLER_NOEC(NMI, T_NMI)
+TRAPHANDLER_NOEC(BRKPT, T_BRKPT)
+TRAPHANDLER_NOEC(OFLOW, T_OFLOW)
+TRAPHANDLER_NOEC(BOUND, T_BOUND)
+TRAPHANDLER_NOEC(ILLOP, T_ILLOP)
+TRAPHANDLER_NOEC(DEVICE, T_DEVICE)
+TRAPHANDLER(DBLFLT, T_DBLFLT)
+TRAPHANDLER(TSS, T_TSS)
+TRAPHANDLER(SEGNP, T_SEGNP)
+TRAPHANDLER(STACK, T_STACK)
+TRAPHANDLER(GPFLT, T_GPFLT)
+TRAPHANDLER(PGFLT, T_PGFLT)
+TRAPHANDLER_NOEC(FPERR, T_FPERR)
+TRAPHANDLER(ALIGN, T_ALIGN)
+TRAPHANDLER_NOEC(MCHK, T_MCHK)
+TRAPHANDLER_NOEC(SIMDERR, T_SIMDERR)
+TRAPHANDLER_NOEC(SYSCALL, T_SYSCALL)
+TRAPHANDLER_NOEC(DEFAULT, T_DEFAULT)
+\end{lstlisting}
+\setmainfont{Times New Roman}
+观察两个宏的定义，发现设置后的入口均会跳转至 \_\_alltraps 入口进行通用处理。
+这是所有处理函数的通用入口，它填充内核栈使其具有完整的 Trapframe 结构，并根据
+Lab提示加载DS、ES寄存器，并将ESP寄存器入栈。
+参考xv6源码，对 \_\_alltraps 补充如下：\par
+\lstset{style=AssemblyStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+ .global _alltraps
+_alltraps:
+	pushl %ds
+	pushl %es
+	pushal
+	movw $GD_KD, %ax
+	movw %ax, %ds
+	movw %ax, %es
+	pushl %esp
+	call trap
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+观察可知，这段代码最终跳转至 trap.c/trap() ，由该函数进行分发与中断处理。
+参考xv6，完成 trap.c/trap\_init() 函数：
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+trap_init(void)
+{
+    extern struct Segdesc gdt[];
+
+    // LAB 3: Your code here.
+    extern void DIVIDE();
+    extern void DEBUG();
+    ...
+    extern void SYSCALL();
+    extern void DEFAULT();
+
+    SETGATE(idt[T_DIVIDE], 0, GD_KT, DIVIDE, 0);
+    SETGATE(idt[T_DEBUG], 0, GD_KT, DEBUG, 0);
+    SETGATE(idt[T_NMI], 0, GD_KT, NMI, 0);
+    SETGATE(idt[T_BRKPT], 0, GD_KT, BRKPT, 0);
+    SETGATE(idt[T_OFLOW], 0, GD_KT, OFLOW, 0);
+    SETGATE(idt[T_BOUND], 0, GD_KT, BOUND, 0);
+    SETGATE(idt[T_ILLOP], 0, GD_KT, ILLOP, 0);
+    SETGATE(idt[T_DEVICE], 0, GD_KT, DEVICE, 0);
+    SETGATE(idt[T_DBLFLT], 0, GD_KT, DBLFLT, 0);
+    SETGATE(idt[T_TSS], 0, GD_KT, TSS, 0);
+    SETGATE(idt[T_SEGNP], 0, GD_KT, SEGNP, 0);
+    SETGATE(idt[T_STACK], 0, GD_KT, STACK, 0);
+    SETGATE(idt[T_GPFLT], 0, GD_KT, GPFLT, 0);
+    SETGATE(idt[T_PGFLT], 0, GD_KT, PGFLT, 0);
+    SETGATE(idt[T_FPERR], 0, GD_KT, FPERR, 0);
+    SETGATE(idt[T_ALIGN], 0, GD_KT, ALIGN, 0);
+    SETGATE(idt[T_MCHK], 0, GD_KT, MCHK, 0);
+    SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMDERR, 0);
+    SETGATE(idt[T_SYSCALL], 1, GD_KT, SYSCALL, 3);
+    SETGATE(idt[T_DEFAULT], 0, GD_KT, DEFAULT, 0);
+    // Per-CPU setup 
+    trap_init_percpu();
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
 
 \end{document}
