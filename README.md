@@ -83,7 +83,7 @@
   * [x] HW2: Shell
   * [x] HW3: System Calls
   * [ ] HW4: Lazy Page Allocation
-  * [ ] HW5: xv6 CPU alarm
+  * [x] HW5: xv6 CPU alarm
   * [ ] HW6: Multithreaded Programming
   * [ ] HW7: xv6 Locks
   * [ ] HW8: Uthreads
