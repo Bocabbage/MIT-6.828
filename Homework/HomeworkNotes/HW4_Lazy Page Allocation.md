@@ -18,11 +18,10 @@ sys_sbrk(void)
   if(argint(0, &n) < 0)
     return -1;
   addr = myproc()->sz;
-  /* Hw4 */
+  // Modified for 6.828 homework4
   // if(growproc(n) < 0)
   //   return -1;
   myproc()->sz += n;
-  /******/
   return addr;
 }
 ```
@@ -57,34 +56,36 @@ Hint: you'll need to call mappages(). In order to do this you'll need to delete 
 Hint: you can check whether a fault is a page fault by checking if tf->trapno is equal to T_PGFLT in trap().
 ```
 
-根据第一个提示，我们找到打印上述错误的位置，从而得知可以调用 `rcr2()` 来获取发生问题的VA；我们的工作是为该地址（准确的说是该地址所处的页）分配物理空间，而根据提示分配空间的任务是由 `allocuvm()` 实现的，我们的代码可以仿照它来写；分配完成后我们需要完成VA到PA的映射，可以调用 `mappages()` 来完成：该函数原本声明为 `static`，在外部调用需取消。
+根据第一个提示，我们找到打印上述错误的位置，从而得知可以调用 `rcr2()` 来获取发生问题的VA；我们的工作是为该地址（准确的说是该地址所处的页）分配物理空间，而根据提示分配空间的任务是由 `allocuvm()` 实现的，我们的代码可以仿照它来写；分配完成后我们需要完成VA到PA的映射，可以调用 `mappages()` 来完成：该函数原本声明为 `static`，在外部调用需取消，并在 trap.c 中声明。
 
 ```c
+char* mem; // need to be defined outside the switch-case context
 ...
-// In user space, assume process misbehaved.
-    /* Hw4 */
-    if(tf->trapno == T_PGFLT)
-    {
-      char* mem;
-      mem = kalloc();
-      if(mem == 0)
-      {
-        cprintf("kalloc out of memory\n");
-        myproc()->killed = 1;
-        break;
-      }
-      memset(mem, 0, PGSIZE);
-      mappages(myproc()->pgdir, (void *)PGROUNDDOWN(rcr2()), PGSIZE, V2P(mem), PTE_W|PTE_U);
-      break;
-    }
-	/******/
+// Add for 6.828 homework4
+case T_PGFLT:
+// uint faultAddr = rcr2();
+// faultAddr = PGROUNDDOWN(faultAddr);
+mem = kalloc();
+if(mem == 0){
+    // cprintf("allocuvm out of memory\n");
+    // deallocuvm(pgdir, newsz, oldsz);
     cprintf("pid %d %s: trap %d err %d on cpu %d "
             "eip 0x%x addr 0x%x--kill proc\n",
             myproc()->pid, myproc()->name, tf->trapno,
             tf->err, cpuid(), tf->eip, rcr2());
     myproc()->killed = 1;
-  }
-
-...
+}
+memset(mem, 0, PGSIZE);
+if(mappages(myproc()->pgdir, (char*)(PGROUNDDOWN(rcr2())), PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+    // cprintf("allocuvm out of memory (2)\n");
+    // deallocuvm(pgdir, newsz, oldsz);
+    kfree(mem);
+    cprintf("pid %d %s: trap %d err %d on cpu %d "
+            "eip 0x%x addr 0x%x--kill proc\n",
+            myproc()->pid, myproc()->name, tf->trapno,
+            tf->err, cpuid(), tf->eip, rcr2());
+    myproc()->killed = 1;
+}
+break;
 ```
 
