@@ -19,3 +19,6 @@
 \contentsline {chapter}{\numberline {2}\Large Page Faults, Breakpoints Exceptions, and System Calls}{19}{chapter.2}%
 \contentsline {section}{\numberline {2.1}\large Handling Page Faults}{19}{section.2.1}%
 \contentsline {section}{\numberline {2.2}\large The Breakpoint Exception}{20}{section.2.2}%
+\contentsline {section}{\numberline {2.3}\large System calls}{21}{section.2.3}%
+\contentsline {section}{\numberline {2.4}\large User-mode startup}{24}{section.2.4}%
+\contentsline {section}{\numberline {2.5}\large Page faults and memory protection}{25}{section.2.5}%

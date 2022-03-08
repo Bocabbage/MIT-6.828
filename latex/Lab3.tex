@@ -858,7 +858,7 @@ trap_init(void)
     SETGATE(idt[T_ALIGN], 0, GD_KT, ALIGN, 0);
     SETGATE(idt[T_MCHK], 0, GD_KT, MCHK, 0);
     SETGATE(idt[T_SIMDERR], 0, GD_KT, SIMDERR, 0);
-    SETGATE(idt[T_SYSCALL], 1, GD_KT, SYSCALL, 3); // !
+    SETGATE(idt[T_SYSCALL], 0, GD_KT, SYSCALL, 3); // !
     SETGATE(idt[T_DEFAULT], 0, GD_KT, DEFAULT, 0);
     // Per-CPU setup 
     trap_init_percpu();
@@ -1005,5 +1005,307 @@ trap_dispatch(struct Trapframe *tf)
 3. 在 SETGATE 阶段如果将 DPL-bit 设置为3则触发breakpoint，否则（DPL=0）则触发 general protection fault。
 这是因为 breakpoint 用户程序处在Ring 3权限级，若设置DPL!=3将导致其无权限发送 int \$3 指令，从而触发地址保护异常。\par 
 4. 上述所有的机制都是为用户态代码提供“有限”访问权限的保障。\par 
+
+\section[\large System calls]{System calls}
+\exercise{7}{
+    \par 
+    {
+        Add a handler in the kernel for interrupt vector T\_SYSCALL. 
+        You will have to edit kern/trapentry.S and kern/trap.c's trap\_init(). 
+        You also need to change trap\_dispatch() to handle the system call interrupt 
+        by calling syscall() (defined in kern/syscall.c) with the appropriate arguments, 
+        and then arranging for the return value to be passed back to the user process 
+        in \%eax. Finally, you need to implement syscall() in kern/syscall.c. 
+        Make sure syscall() returns -E\_INVAL if the system call number is invalid. 
+        You should read and understand lib/syscall.c 
+        (especially the inline assembly routine) in order to 
+        confirm your understanding of the system call interface. 
+        Handle all the system calls listed in inc/syscall.h 
+        by invoking the corresponding kernel function for each call.
+    } \par
+
+    {
+        Run the user/hello program under your kernel (make run-hello). 
+        It should print "hello, world" on the console and then cause a page fault in user mode. 
+        If this does not happen, it probably means your system call handler isn't quite right. 
+        You should also now be able to get make grade to succeed on the testbss test.
+    } \par 
+}
+
+这一节实验要补全系统调用的完整框架，我们需要理清JOS系统调用的设计。\par 
+用户态系统调用的接口由 lib/syscall.c 的 syscall() 函数提供，它会使用 int 指令
+发射30号中断。我们注意 syscall() 中内联汇编的写法：\par 
+\newpage
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+// lib/syscall.c
+static inline int32_t
+syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
+{
+    ...
+    asm volatile("int %1\n"
+    : "=a" (ret)
+    : "i" (T_SYSCALL),
+        "a" (num),      // eax
+        "d" (a1),       // edx
+        "c" (a2),       // ecx
+        "b" (a3),       // ebx
+        "D" (a4),       // edi
+        "S" (a5)        // esi
+    : "cc", "memory");
+    ...
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+查看C语言内联汇编的语法可知，该int命令发送时将 syscall-no 放入 EAX 寄存器中，并
+在其他寄存器中存放参数。int 命令发生后，根据前面的内容可知执行流将交给 kern/trap.c 中的 trap() 函数，
+并进一步交给 trap\_dispatch 分发任务。我们需要在此处补全 dispatch 部分，将系统调用交给 kern/syscall.c 的
+syscall() 处理（注意此处switch分支直接return，不再执行后续内容）：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static void
+trap_dispatch(struct Trapframe *tf)
+{
+    switch(tf->tf_trapno)
+    {
+        ...
+        case T_SYSCALL:
+            tf->tf_regs.reg_eax = syscall(
+                tf->tf_regs.reg_eax,	// syscall-no
+                tf->tf_regs.reg_edx,
+                tf->tf_regs.reg_ecx,
+                tf->tf_regs.reg_ebx,
+                tf->tf_regs.reg_edi,
+                tf->tf_regs.reg_esi
+            );
+            return;	// !
+    }
+    ...
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+然后我们再进一步完善内核的 syscall() 函数，这个函数的主要功能是根据
+syscall-no 将任务分发给真正的处理函数，并将参数传递给它们：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+int32_t
+syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
+{
+    // Call the function corresponding to the 'syscallno' parameter.
+    // Return any appropriate return value.
+    // LAB 3: Your code here.
+
+    // panic("syscall not implemented");
+
+    switch (syscallno) 
+    {
+        case SYS_cputs:
+            sys_cputs((char *)a1, a2);
+            return 0;
+        case SYS_cgetc:
+            return sys_cgetc();
+        case SYS_getenvid:
+            return sys_getenvid();
+        case SYS_env_destroy:
+            return sys_env_destroy(a1);
+        default:
+            return -E_INVAL;
+    }
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+至此，我们可以总结出自用户态调用\underline{JOS提供系统调用函数的完整流程}：\par 
+\begin{itemize}
+    \item[1.] 调用 lib 中的 syscall 函数，该函数使用 int 指令发送中断；\par
+    \item[2.] 程序陷入JOS内核，根据IDT中记录的函数，执行流交给 trap 函数；\par
+    \item[3.] trap 函数调用 trap\_dispatch 分发任务； \par
+    \item[4.] trap\_dispatch 将任务及函数参数传递给 kern 中的syscall 函数；\par
+    \item[5.] syscall 函数进一步调用真正执行任务的函数（如sys\_cputs）。\par
+\end{itemize}
+
+\newpage
+\section[\large User-mode startup]{User-mode startup}
+完善基础设施后，我们可以尝试运行用户进程，并尝试使用JOS目前提供的系统调用了。\par 
+\exercise{8}{
+    \par 
+    {
+        Add the required code to the user library, then boot your kernel. 
+        You should see user/hello print "hello, world" and then print "i am environment 00001000". 
+        user/hello then attempts to "exit" by calling sys\_env\_destroy() 
+        (see lib/libmain.c and lib/exit.c). 
+        Since the kernel currently only supports one user environment, 
+        it should report that it has destroyed the only environment and 
+        then drop into the kernel monitor. 
+        You should be able to get \textbf{make grade} to succeed on the hello test.
+    } \par 
+}
+根据实验的提示，我们需要补充 user-lib 的内容，而具体是 libmain.c 的内容。
+实验参考材料告诉我们，所有用户态程序以 lib/entry.S 处代码为入口并进入 libmain.c 的
+libmain() 函数。该函数应当设置当前用户进程的目标，并将执行权交给真正的用户态函数 umain
+（在执行真正用户态程序前的各类准备处理与真实操作系统的libc有相似之处）。
+我们修改 libmain 函数：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+libmain(int argc, char **argv)
+{
+    // set thisenv to point at our Env structure in envs[].
+    // LAB 3: Your code h(ere.
+    thisenv = envs + ENVX(sys_getenvid());
+
+    // save the name of the program so that panic() can use it
+    if (argc > 0)
+        binaryname = argv[0];
+
+    // call user main routine
+    umain(argc, argv);
+
+    // exit gracefully
+    exit();
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+我们用 \textbf{make run-hello} 命令查看 hello 程序运行结果。
+可以看到，在新进程被分配给用户态后，分别产生了两次中断号为48（0x30）的
+中断（即系统调用），根据代码我们也可以知道分别为对 getenvid 及 cputs 的调用：\par
+\quad \par 
+{
+\centering
+\includegraphics[width=0.5\textwidth]{runhello} \par
+} 
+
+\newpage
+\section[\large Page faults and memory protection]{Page faults and memory protection}
+实验的最后一部分内容是处理page fault的异常。根据 Exercise 5 的内容，所有 page fault 都被交给
+page\_fault\_handler 函数处理。\underline{实验要求我们区分处理内核引发/用户态引发的page fault}。\par 
+\exercise{9}{
+    \par 
+    {
+        Change kern/trap.c to panic if a page fault happens in kernel mode.
+    } \par
+    {
+        Hint: to determine whether a fault happened in user mode or in kernel mode, 
+        check the low bits of the tf\_cs.
+    } \par 
+    {
+        Read \textbf{user\_mem\_assert} in kern/pmap.c and implement 
+        \textbf{user\_mem\_check} in that same file. 
+        Change kern/syscall.c to sanity check arguments to system calls.
+    } \par 
+    {
+        Boot your kernel, running \textbf{user/buggyhello}. 
+        The environment should be destroyed, and the kernel should not panic.
+    } \par 
+    {
+        Finally, change \textbf{debuginfo\_eip} in kern/kdebug.c to call 
+        user\_mem\_check on usd, stabs, and stabstr. 
+        If you now run user/breakpoint, you should be able to run backtrace 
+        from the kernel monitor and see the backtrace traverse into lib/libmain.c 
+        before the kernel panics with a page fault. 
+        What causes this page fault? 
+        You don't need to fix it, but you should understand why it happens.
+    } \par 
+}
+我们首先修改 page\_fault\_handler 函数，使其将所有的内核页错误 panic 处理：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+page_fault_handler(struct Trapframe *tf)
+{
+    ...
+    // LAB 3: Your code here.
+    if(tf->tf_cs == GD_KT)
+        panic("Page fault from kernel.");
+    ...
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+然后我们再根据实验要求，构建 user\_mem\_check 函数。该函数供 user\_mem\_assert 函数调用，
+用于检查用户态程序是否产生内存访问的问题。user\_mem\_assert 函数实现完成后供 syscall 的实际功能
+函数使用。根据实验提示，user\_mem\_check 函数实现如下：\par
+\newpage
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+int
+user_mem_check(struct Env *env, const void *va, size_t len, int perm)
+{
+    // LAB 3: Your code here.
+    uintptr_t va_start = (uintptr_t)ROUNDDOWN(va, PGSIZE);		// first-page
+    uintptr_t va_end = (uintptr_t)ROUNDDOWN(va+len, PGSIZE);	// last-page
+    for(uintptr_t pva = va_start; pva <= va_end; pva += PGSIZE)
+    {
+        pte_t *ppte;
+        // struct PageInfo *ppage;
+        // ppage = page_lookup(env->env_pgdir, (void *)pva, &ppte);
+        ppte = pgdir_walk(env->env_pgdir, (void *)pva, 0);
+        if(!ppte || pva > ULIM || ((*ppte & perm) != perm))
+        {
+            if(pva < (uintptr_t)va)
+                user_mem_check_addr = (uintptr_t)va;
+            else
+                user_mem_check_addr = pva;
+            return -E_FAULT;
+        }
+
+    }
+
+    return 0;
+}    
+\end{lstlisting}
+\setmainfont{Times New Roman}
+再检查当前需要调用 user\_mem\_assert 的函数sys\_cputs：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static void
+sys_cputs(const char *s, size_t len)
+{
+    // Check that the user has permission to read memory [s, s+len).
+    // Destroy the environment if not.
+
+    // LAB 3: Your code here.
+    user_mem_assert(curenv, (void *)s, len, 0);
+
+    // Print the string supplied by the user.
+    cprintf("%.*s", len, s);
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+\newpage 
+最后再根据要求修改 debuginfo\_eip 函数即可：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+...
+// Make sure this memory is valid.
+// Return -1 if it is not.  Hint: Call user_mem_check.
+// LAB 3: Your code here.
+if(user_mem_check(curenv, usd, sizeof(struct UserStabData), PTE_U))
+    return -1;
+...
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\exercise{10}{
+    \par 
+    {
+        Boot your kernel, running user/evilhello. 
+        The environment should be destroyed, and the kernel should not panic.
+    } \par 
+}
+\quad \par
+
+{
+\centering
+\includegraphics[width=0.8\textwidth]{evilhello} \par 
+}
 
 \end{document}
