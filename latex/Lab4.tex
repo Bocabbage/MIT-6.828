@@ -1,0 +1,315 @@
+\documentclass[12pt, letterpaper]{report}
+\usepackage{enumitem}
+\usepackage[a4paper, margin=0.7in, top=20mm, bottom=20mm]{geometry}
+\usepackage{mathspec}
+\usepackage[UTF8]{ctex}
+\usepackage[colorlinks=true, linkcolor=black, urlcolor=blue]{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{xparse}
+\usepackage{tcolorbox}
+\usepackage{mdframed}
+
+\graphicspath{ {./pics/} }
+
+% ---- Code Section Style ----
+\colorlet{mygray}{black!30}
+\colorlet{mygreen}{green!60!blue}
+\colorlet{mymauve}{red!60!blue}
+
+\tcbuselibrary{breakable}
+\NewDocumentCommand{\exercise}{ m +m }{
+    {
+        \edef\originalParIndent{\the\parindent}
+        \begin{tcolorbox}[breakable,arc=0mm,boxrule=0.8pt]
+            \setlength{\parindent}{\originalParIndent}
+            \noindent
+            \textbf{\large Exercise #1}
+            \indent
+            #2
+        \end{tcolorbox}
+    }
+}
+
+\tcbuselibrary{breakable}
+\NewDocumentCommand{\question}{ m +m }{
+    {
+        \edef\originalParIndent{\the\parindent}
+        \begin{tcolorbox}[breakable,arc=0mm,boxrule=0.8pt]
+            \setlength{\parindent}{\originalParIndent}
+            \noindent
+            \textbf{\large Question}
+            \indent
+            #2
+        \end{tcolorbox}
+    }
+}
+
+\tcbuselibrary{breakable}
+\NewDocumentCommand{\challenge}{ m +m }{
+    {
+        \edef\originalParIndent{\the\parindent}
+        \begin{tcolorbox}[breakable,arc=0mm,boxrule=0.8pt]
+            \setlength{\parindent}{\originalParIndent}
+            \noindent
+            \textbf{\large Challenge!}
+            \indent
+            #2
+        \end{tcolorbox}
+    }
+}
+
+\lstdefinelanguage
+   [x64]{Assembler}     % add a "x64" dialect of Assembler
+   [x86masm]{Assembler} % based on the "x86masm" dialect
+   % with these extra keywords:
+   {morekeywords={CDQE,CQO,CMPSQ,CMPXCHG16B,JRCXZ,LODSQ,MOVSXD, %
+                  POPFQ,PUSHFQ,SCASQ,STOSQ,IRETQ,RDTSCP,SWAPGS, %
+                  rax,rdx,rcx,rbx,rsi,rdi,rsp,rbp, %
+                  r8,r8d,r8w,r8b,r9,r9d,r9w,r9b, %
+                  r10,r10d,r10w,r10b,r11,r11d,r11w,r11b, %
+                  r12,r12d,r12w,r12b,r13,r13d,r13w,r13b, %
+                  r14,r14d,r14w,r14b,r15,r15d,r15w,r15b}} % etc.
+
+
+\lstset{
+  backgroundcolor=\color{gray!10},  
+  basicstyle=\ttfamily,
+  columns=fullflexible,
+  breakatwhitespace=false,      
+  breaklines=true,                
+  captionpos=b,                    
+  commentstyle=\color{mygreen}, 
+  extendedchars=true,              
+  frame=single,                   
+  keepspaces=true,             
+  keywordstyle=\color{blue},                    
+  numbers=none,                
+  numbersep=5pt,                   
+  numberstyle=\tiny\color{blue}, 
+  rulecolor=\color{mygray},        
+  showspaces=false,               
+  showtabs=false,                 
+  stepnumber=5,                  
+  stringstyle=\color{mymauve},    
+  tabsize=3,                      
+  title=\lstname                
+}
+
+\lstdefinestyle{CStyle}{  
+    % commentstyle=\color{mGreen},
+    % keywordstyle=\color{magenta},
+    % numberstyle=\tiny\color{mGray},
+    % stringstyle=\color{mPurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,                              
+    showstringspaces=false,
+    language=C
+}
+
+\lstdefinestyle{AssemblyStyle}{  
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,                              
+    showstringspaces=false,
+    language=[x64] Assembler
+}
+
+
+\lstdefinestyle{MakeFileStyle}{  
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,                              
+    showstringspaces=false,
+    language=[gnu] make
+}
+
+
+\setitemize[1]{itemsep=0pt,partopsep=0pt,parsep=\parskip,topsep=5pt}
+
+% ----------------------------
+
+
+\setcounter{chapter}{0}
+\setlength{\parindent}{2em}
+\setmainfont{Times New Roman}
+\setcounter{tocdepth}{1}
+\setcounter{secnumdepth}{1}
+
+\title{MIT6.828 Lab4: Preemptive Multitasking}
+\author{Zhuofan Zhang}
+\date{April 2020}
+
+
+
+\begin{document}
+
+\maketitle
+% ---- Contents ----
+\pagenumbering{roman}
+\renewcommand\contentsname{\Huge Contents}
+\tableofcontents{}
+% ------------------
+
+\newpage
+\pagenumbering{arabic}
+
+% ---- part A ----
+\chapter[\Large Multiprocessor Support and Cooperative Multitasking]{Multiprocessor Support and Cooperative Multitasking}
+\section[\large Multiprocessor Support]{Multiprocessor Support}
+本次Lab的内容是对JOS进行补充以提供多处理器支持，并实现任务调度功能。\par
+
+JOS实现的多核支持属于\textsl{对称多核支持(Symmertric Multiprocessing, SMP)}，即所有处理器
+对资源（内存、IO总线等）的访问是平等的。SMP的概念是在系统初始化完成后建立的，
+在Boot阶段，仍然需要选择一个CPU作为\textsl{启动处理器(Bootstrap Processor, BSP)}，用来初始化
+资源并启动OS，最后启动其他的CPU（称为\textsl{应用处理器(Application Processor, AP)}）。
+对BSP的选择是由BIOS完成的，在当前实验阶段，我们相当于完成了BSP的启动内容。\par 
+
+在SMP体系中，每个CPU都拥有一个称为LAPIC(local Advanced-Programmable Interrupt Controller)的可编程中断单元，用于在系统中
+传递中断信息，并提供CPU的唯一识别信息。因此，与多个CPU的通讯依赖于LAPIC单元。 \par
+
+在本次实验中我们使用了 LAPIC 的如下功能：
+\begin{itemize}
+    \item[·]
+    代码可以利用APIC-id确认自己运行于哪一个cpu上（见 cpunum() 的实现）
+    \item[·]
+    利用BSP来启动其他的AP（见 lapic\_startap() 的实现）
+    \item[·]
+    使用 LAPIC 中的时钟中断来实现抢断式调度（PartC，apic\_init()）
+\end{itemize}
+
+CPU对LAPIC单元的访问使用的是一段映射到PAS特定位置的区域：memory-mapped I/O (MMIO)。MMIO是一段
+硬连接到部分IO设备寄存器的物理地址区域，常用于访问设备的寄存器。JOS的VAS在MMIOBASE处
+留有4MB的空间用于映射这段物理地址区域。\par
+\newpage
+\exercise{1}{
+        \par 
+        {
+            Implement mmio\_map\_region in kern/pmap.c. 
+            To see how this is used, look at the beginning of lapic\_init in kern/lapic.c. 
+            You'll have to do the next exercise, too, 
+            before the tests for mmio\_map\_region will run.
+        } \par
+}
+\quad \par
+这一个Exercise要求我们实现mmio\_map\_region()。我们查看该函数的注释可知，它就是用来
+实现上文提到的MMIO在VAS中映射的函数。JOS的VAS中预留了 [MMIOBASE, MMIOLIM) 可供使用。
+根据提示使用 boot\_map\_region() 并补上禁用缓存的PWT-flag，实现函数如下：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void *
+mmio_map_region(physaddr_t pa, size_t size)
+{
+    static uintptr_t base = MMIOBASE;
+
+    size = ROUNDUP(size, PGSIZE);
+    if(base + size > MMIOLIM)
+        panic("mmio_map_region: MMIOLIM overflow.\n");
+    boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT);
+    base += size;
+    return (void *)(base - size);
+    
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\section[\large Application Processor Bootstrap]{Application Processor Bootstrap}
+在启动APs前，先启动的BSP必须能够获取APs的信息，如CPU数量、APIC IDs等。
+这些信息被保留在BIOS中的 MP config table 中，kern/mpconfig.c/mp\_init() 
+将其读出。\par 
+kern/init.c/boot\_aps() 是整个流程的核心函数，它将AP的入口程序加载到内存，
+并发送启动信号。AP的入口程序被加载到任意可用的低位640k地址（JOS将其加载到MPENTRY\_PADDR），
+它与BSP的入口程序有一定的区别。 \par 
+boot\_aps() 函数通过给每个AP的LAPIC发送STARTUP信号的方式唤醒它们，同时设置它们的entry位置，
+即为AP准备的入口程序（位于MPENTRY\_PADDR），执行完入口程序后AP将运行mp\_main()；与此同时，
+BSP唤醒每一个AP时等待它的CPU状态被设置为CPU\_STARTED——即该AP成功启动后，再开始唤醒下一个AP。\par 
+
+\newpage
+\exercise{2}{
+        \par 
+        {
+            Read boot\_aps() and mp\_main() in kern/init.c, 
+            and the assembly code in kern/mpentry.S. 
+            Make sure you understand the control flow transfer 
+            during the bootstrap of APs. 
+            Then modify your implementation of page\_init() 
+            in kern/pmap.c to avoid adding the page at 
+            MPENTRY\_PADDR to the free list, 
+            so that we can safely copy and run AP bootstrap code 
+            at that physical address. 
+            Your code should pass the updated 
+            check\_page\_free\_list() test 
+            (but might fail the updated check\_kern\_pgdir() test, 
+            which we will fix soon).
+        } \par
+}
+\quad \par
+这一个Exercise的编码任务比较简单：修改我们在Lab2实现的page\_init函数，将
+现在存放有AP初始代码的那个物理页从空闲列表中拿出去：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+page_init(void)
+{
+    // LAB 4:
+    // Change your code to mark the physical page at MPENTRY_PADDR
+    // as in use
+    
+    ...
+
+    // 2) Base-memory
+    size_t i;
+    for (i = 1; i < npages_basemem; i++) {
+        // Add for Lab4
+        if(i * PGSIZE == MPENTRY_PADDR)
+        {
+            pages[i].pp_ref = 1;
+            continue;
+        }
+            
+        pages[i].pp_ref = 0;
+        pages[i].pp_link = page_free_list;
+        page_free_list = &pages[i];
+    }
+
+    ...
+
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+代码之外的任务是要求我们阅读 boot\_aps() 及 mp\_main() 源码以及
+APs的entry汇编代码，捋清执行流。boot\_aps() 做的事情就是将mpentry.S搬运到前文提到的
+MPENTRY\_PADDR物理页上，再循环唤醒APs（使用lapic\_startaps()）；APs被
+唤醒后从mpentry.S开始执行，再跳转到mp\_main() 上。\par 
+\quad \par 
+
+\question{1}{
+    {
+        \par 
+        Compare kern/mpentry.S side by side with boot/boot.S. 
+        Bearing in mind that kern/mpentry.S is compiled and linked to 
+        run above KERNBASE just like everything else in the kernel, 
+        what is the purpose of macro MPBOOTPHYS? 
+        Why is it necessary in kern/mpentry.S but not in boot/boot.S? 
+        In other words, what could go wrong if it were omitted in kern/mpentry.S?
+        Hint: recall the differences between the link address 
+        and the load address that we have discussed in Lab 1.
+    }
+}
+
+{\noindent AP的入口程序与BSP的入口程序差异主要表现在：}
+\begin{itemize}
+    \item[·]
+    使用地址时需要使用MPBOOTPHYS-macro进行一步转换；
+    \item[·]
+    无需进行A20地址线的使能操作；
+    \item[·]
+    直接在入口处打开了分页功能，并使用已经被BSP设置好的内核页表目录
+\end{itemize}
+使用MPBOOTPHYS是因为mpentry.S被链接到了内核的高地址处（above KERNBASE）,
+需要进行转换。
+
+\end{document}
