@@ -289,7 +289,7 @@ MPENTRY\_PADDR物理页上，再循环唤醒APs（使用lapic\_startaps()）；A
 \question{1}{
     {
         \par 
-        Compare kern/mpentry.S side by side with boot/boot.S. 
+        1. Compare kern/mpentry.S side by side with boot/boot.S. 
         Bearing in mind that kern/mpentry.S is compiled and linked to 
         run above KERNBASE just like everything else in the kernel, 
         what is the purpose of macro MPBOOTPHYS? 
@@ -420,6 +420,236 @@ trap_init_percpu(void)
 }
 \end{lstlisting}
 \setmainfont{Times New Roman}
+
+\newpage
+\subsection{Locking}
+目前我们的 mp\_main() 仍处于空转状态，但在有效使用APs来并行运算代码前，我们必须解决并发
+所带来的竞争问题。JOS解决并发访问冲突的方法是使用big-kernel-lock（也即早期Linux使用的方法），
+任意时刻仅能容纳1个user-mode进程陷入内核。JOS已经提前为我们实现了两个API：lock\_kernel() 和
+unlock\_kernel()，其内部实现是一个全局自旋锁。\par 
+根据Lab页面的提示，我们需要在以下部分上锁/释放锁：\par 
+
+\begin{itemize}
+    \item[·]\textbf{i386\_init()：}
+    BSP在启动APs前需先持有锁（该锁在后续执行流的sched\_yield()中释放），
+    防止与APs同时调度进程时出现race-condition；
+    \item[·]\textbf{mp\_main()：}
+    APs与BSP同理，为防止进程调度时产生race-condition，调度前需先持锁；
+    \item[·]\textbf{trap()：}
+    如前文所述，当user-mode进程陷入内核时需持锁，保证同一时刻仅一个进程陷入内核中；
+    \item[·]\textbf{env\_run()：}
+    env\_run即从内核态返回user-mode，此时释放内核锁，让其他等待陷入的进程可以进入内核
+\end{itemize}
+
+\exercise{5}{
+    \par 
+    {
+        Apply the big kernel lock as described above, 
+        by calling lock\_kernel() and unlock\_kernel() at the proper locations.
+    } \par
+}
+这个练习就是要求我们实现上述内容，我们直接在对应函数中相应区域填入代码即可：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+/**** i386_init() ****/
+...
+lock_kernel();
+boot_aps(); 
+...
+/**** mp_main() ****/
+...
+    lock_kernel(); # Add in Lab4 Exercise 5
+    sched_yield();
+...
+/**** trap() ****/
+...
+if ((tf->tf_cs & 3) == 3) {
+    ...
+    lock_kernel();
+    assert(curenv);
+...
+/**** env_run() ****/
+...
+lcr3(PADDR(curenv->env_pgdir));
+unlock_kernel(); # Add in Lab4 Exercise 5
+env_pop_tf(&(curenv->env_tf));
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+\question{2}{
+    {
+        \par 
+        2. It seems that using the big kernel lock guarantees that 
+        only one CPU can run the kernel code at a time. 
+        Why do we still need separate kernel stacks for each CPU? 
+        Describe a scenario in which using a shared kernel stack will go wrong, 
+        even with the protection of the big kernel lock.
+    }
+}
+在进入内核前，实际上也有对内核栈的操作（trap将寄存器信息压入内核栈中），此时栈处于无锁状态，
+有可能发生race-condition。\par 
+
+\section[\large Round-Robin Scheduling]{Round-Robin Scheduling}
+本节要求我们实现最简单的Round robin进程调度。
+sched\_yield()函数负责从envs中挑选返回user-mode后运行的新进程。调度算法即Round-robin：在循环队列中寻找
+当前进程（curenv）位置后方可执行的（ENV\_RUNNABLE）第一个进程。\par 
+\exercise{6}{
+    \par 
+    {
+        Implement round-robin scheduling in sched\_yield() as described above. 
+        Don't forget to modify syscall() to dispatch sys\_yield().
+     \par
+    
+        Make sure to invoke sched\_yield() in mp\_main.
+     \par
+    
+        Modify kern/init.c to create three (or more!) environments 
+        that all run the program user/yield.c.
+     \par
+    
+        Run make qemu. 
+        You should see the environments switch back and forth between 
+        each other five times before terminating, like below. \par 
+        Test also with several CPUS: \textsl{make qemu CPUS=2}.
+     \par
+    
+     \textbf{...} \par
+     \textbf{   Hello, I am environment 00001000.} \par
+     \textbf{   Hello, I am environment 00001001.} \par
+     \textbf{   Hello, I am environment 00001002.} \par
+     \textbf{   Back in environment 00001000, iteration 0.} \par
+     \textbf{   Back in environment 00001001, iteration 0.} \par
+     \textbf{   Back in environment 00001002, iteration 0.} \par
+     \textbf{   Back in environment 00001000, iteration 1.} \par
+     \textbf{   Back in environment 00001001, iteration 1.} \par
+     \textbf{   Back in environment 00001002, iteration 1.} \par
+     \textbf{...}
+     \par
+    
+    
+        After the yield programs exit, 
+        there will be no runnable environment in the system, 
+        the scheduler should invoke the JOS kernel monitor. 
+        If any of this does not happen, then fix your code before proceeding.
+     \par
+    } 
+}
+
+\newpage
+我们首先定位到sched\_yield()函数。根据注释的提示，我们可以将函数实现如下（需要考虑三种
+调度的情况）：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+sched_yield(void)
+{
+    struct Env *idle = NULL;
+    ...
+    // situation 1: no running env
+    if(!curenv)
+    {
+        for(int i = 0; i < NENV; ++i)
+        {
+            if(envs[i].env_status == ENV_RUNNABLE)
+            {
+                idle = &envs[i];
+                break;
+            }
+        }
+    }
+    // situation 2: search after not-null curenv
+    else
+    {
+        int currentIdx = curenv - envs;
+        for(int i = 1; i < NENV; ++i)
+        {
+            int idx = (currentIdx + i) % NENV;
+            if(envs[idx].env_status == ENV_RUNNABLE)
+            {
+                idle = &envs[idx];
+                break;
+            }
+        }
+    }
+    // situation 3: only the curenv can run
+    if(!idle && curenv && curenv->env_status == ENV_RUNNING)
+        idle = curenv;
+
+    // find next-run success
+    if(idle)
+        env_run(idle);	// the env_run will unlock_kernel
+
+    // sched_halt never returns
+    sched_halt();
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+之后，我们实现提供给用户态的sys\_yield()接口（此处从略）。为了测试结果，我们根据提示
+在i386\_init()中添加创建用户进程的代码：\par 
+
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+/**** i386_init() ****/
+...
+#else
+	// Touch all you want.
+	// ENV_CREATE(user_primes, ENV_TYPE_USER);
+#endif // TEST*
+
+	for(int i = 0; i < 3; ++i)
+	{
+		ENV_CREATE(user_yield, ENV_TYPE_USER);
+	}
+
+	// Schedule and run the first user environment!
+	sched_yield();
+\end{lstlisting}
+\setmainfont{Times New Roman}
+在 \textsl{make qemu} 命令启用单个CPU运行，得到运行结果如下：\par
+\quad \par  
+{
+\centering
+\includegraphics[width=0.5\textwidth]{ex6-1} \par
+}
+\newpage
+若以 \textsl{make qemu CPUS=2} 命令启用双核系统，得到的运行结果如下：\par 
+\quad \par  
+{
+\centering
+\includegraphics[width=0.5\textwidth]{ex6-2} \par
+}
+\quad \par 
+\question{3}{
+    {
+        \par 
+        3. In your implementation of env\_run() you should have called lcr3(). 
+        Before and after the call to lcr3(), your code makes references 
+        (at least it should) to the variable e, 
+        the argument to env\_run. Upon loading the \%cr3 register, 
+        the addressing context used by the MMU is instantly changed. 
+        But a virtual address (namely e) has meaning relative to a given address 
+        context--the address context specifies the physical address to which 
+        the virtual address maps. 
+        Why can the pointer e be dereferenced both before and after the addressing switch?
+    }
+    {
+        \par 
+        4. Whenever the kernel switches from one environment to another, 
+        it must ensure the old environment's registers 
+        are saved so they can be restored properly later. 
+        Why? Where does this happen?
+    }
+}
+
+第一个问题的答案很简单：所有的进程都映射了完整的VAS的内核部分，而envs的映射也位于内核
+部分中，故所有进程对于envs数组任一进程的地址翻译都是相同的。\par 
+第二个问题：进程的现场保存发生在 \_alltrap 过程中，现场恢复发生在 env\_pop\_tf() 时。
 
 
 \end{document}
