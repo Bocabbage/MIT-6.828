@@ -205,7 +205,7 @@ mmio_map_region(physaddr_t pa, size_t size)
     size = ROUNDUP(size, PGSIZE);
     if(base + size > MMIOLIM)
         panic("mmio_map_region: MMIOLIM overflow.\n");
-    boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT);
+    boot_map_region(kern_pgdir, base, size, pa, PTE_W | PTE_PCD | PTE_PWT);
     base += size;
     return (void *)(base - size);
     
@@ -311,5 +311,115 @@ MPENTRY\_PADDR物理页上，再循环唤醒APs（使用lapic\_startaps()）；A
 \end{itemize}
 使用MPBOOTPHYS是因为mpentry.S被链接到了内核的高地址处（above KERNBASE）,
 需要进行转换。
+
+\section[\large Per-CPU State and Initialization]{Per-CPU State and Initialization}
+每个CPU具有自己独立的状态和信息，JOS 将各个CPU独立的信息定义在 kern/cpu.h 中。
+其中比较关键的内容有：
+\begin{itemize}
+    \item[·]\textbf{CPU 内核栈：}
+    支持多CPU同时陷入内核；
+    \item[·]\textbf{TSS及TSS描述符：}
+    每个CPU拥有独立的TSS指明内核栈位置；
+    \item[·]\textbf{当前运行Env指针：}
+    用于记录每个CPU的当前运行进程；
+    \item[·]\textbf{系统寄存器：}
+    每个CPU需独立加载页表、GDT、LDT等内容
+\end{itemize}
+本节实验的内容是对这类 per-CPU 状态进行初始化。\par 
+
+\exercise{3}{
+    \par 
+    {
+        Modify mem\_init\_mp() (in kern/pmap.c) to map per-CPU stacks 
+        starting at KSTACKTOP, as shown in inc/memlayout.h. 
+        The size of each stack is KSTKSIZE bytes plus KSTKGAP bytes of 
+        unmapped guard pages. 
+        Your code should pass the new check in check\_kern\_pgdir().
+    } \par
+}
+这个Exercise要求我们对各个内核的内核栈进行映射。BSP在初始化VAS时，
+完成对各个cpu的内核栈的映射（JOS默认支持8核，且不管每次实际启动的CPU数量，为8个内核栈都分配空间）。
+根据提示，我们知道分配给各个cpu内核栈的物理空间由percpu\_kstacks数组描述（定义于mpconfig.c中），我们需要将
+VAS中的各个内核栈位置映射到这个数组描述的物理地址处。同时也注意到，JOS的VAS中每个内核
+栈也预留了一个Guard-page，我们需要跨过这段区域进行映射。\par 
+实现内核栈映射的方法与之前Lab2中对BSP的内核栈映射方式相同，同时注意到：此处进行映射时
+也替换了原本BSP中的内核栈位置（从bootstack切换到了\&percpu\_kstacks[0]）。\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static void
+mem_init_mp(void)
+{
+    ...
+    // LAB 4: Your code here:
+    for(int i = 0; i < NCPU; ++i)
+    {
+        // Map the kstk_i
+        boot_map_region(
+            kern_pgdir, 
+            KSTACKTOP - i*(KSTKSIZE + KSTKGAP) - KSTKSIZE,
+            KSTKSIZE,
+            PADDR(percpu_kstacks[i]),
+            PTE_W 
+        );    
+    }
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\exercise{4}{
+    \par 
+    {
+        The code in trap\_init\_percpu() (kern/trap.c) initializes the TSS 
+        and TSS descriptor for the BSP. 
+        It worked in Lab 3, but is incorrect when running on other CPUs. 
+        Change the code so that it can work on all CPUs. 
+        (Note: your new code should not use the global \textsl{ts} variable any more.)
+    } \par
+}
+这个Exercise要求我们修改trap初始化的部分，主要就是修改TSS及其descriptor：TSS内主要要修改的是
+对应的内核栈（每个CPU使用各自独立的内核栈），同时修改GDT表项（如前文所述，每个CPU拥有自己
+独立的TSS-descriptor）。根据实验提示我们可以完成下列代码：\par 
+\newpage
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+trap_init_percpu(void)
+{
+    ...
+    // LAB 4: Your code here:
+
+    // Setup a TSS so that we get the right stack
+    // when we trap to the kernel.
+    // ts.ts_esp0 = KSTACKTOP;
+    // ts.ts_ss0 = GD_KD;
+    // ts.ts_iomb = sizeof(struct Taskstate);
+    uint8_t nowCpuId = thiscpu->cpu_id;
+    struct Taskstate* nowTs = &(thiscpu->cpu_ts);
+
+    nowTs->ts_esp0 = KSTACKTOP - nowCpuId*(KSTKSIZE + KSTKGAP);
+    nowTs->ts_ss0 = GD_KD;
+    nowTs->ts_iomb = sizeof(struct Taskstate);
+
+    // Initialize the TSS slot of the gdt.
+    // gdt[(GD_TSS0 >> 3)] = SEG16(STS_T32A, (uint32_t) (&ts),
+    // 				sizeof(struct Taskstate) - 1, 0);
+    // gdt[(GD_TSS0 >> 3)].sd_s = 0;
+    gdt[(GD_TSS0 >> 3) + nowCpuId] = SEG16(STS_T32A, (uint32_t) (nowTs),
+                    sizeof(struct Taskstate) - 1, 0);
+    gdt[(GD_TSS0 >> 3) + nowCpuId].sd_s = 0;
+
+    // Load the TSS selector (like other segment selectors, the
+    // bottom three bits are special; we leave them 0)
+    // ltr(GD_TSS0);
+    ltr(GD_TSS0 + (nowCpuId << 3));
+
+    // Load the IDT
+    lidt(&idt_pd);
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
 
 \end{document}
