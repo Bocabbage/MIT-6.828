@@ -651,5 +651,252 @@ sched_yield(void)
 部分中，故所有进程对于envs数组任一进程的地址翻译都是相同的。\par 
 第二个问题：进程的现场保存发生在 \_alltrap 过程中，现场恢复发生在 env\_pop\_tf() 时。
 
+\newpage
+\section[\large System Calls for Environment Creation]{System Calls for Environment Creation}
+目前我们的系统已经可以完成用户态进程的调度了，但我们还未提供真正的用户态使用进程的接口。这一节
+我们将实现其中最基础的一部分。提供给用户的进程接口同样采用系统调用的实现方式。\par 
+
+\exercise{7}{
+    \par 
+    {
+        Implement the system calls described above in kern/syscall.c and 
+        make sure syscall() calls them. 
+        You will need to use various functions in kern/pmap.c and kern/env.c, 
+        particularly envid2env(). 
+        For now, whenever you call envid2env(), 
+        pass 1 in the checkperm parameter. 
+        Be sure you check for any invalid system call arguments, 
+        returning -E\_INVAL in that case. 
+        Test your JOS kernel with user/dumbfork and make sure it works 
+        before proceeding.
+    } \par
+}
+
+\subsection{\large sys\_exofork}
+sys\_exofork()函数可以用于创建新的子进程，并且设置子进程的内存映射、
+寄存器状态与父进程完全一致（按照状态机复制理解）。对于父子进程而言，函数返回不同的
+值（父进程得到子进程的env\_id，子进程返回0）：\par
+（注：返回值的设置应回忆syscall的调用流与env状态保存逻辑；对于子进程而言，当它
+被调度时看起来“就像刚从系统调用返回”一样） 
+
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static envid_t
+sys_exofork(void)
+{
+    // Create the new environment with env_alloc(), from kern/env.c.
+    // It should be left as env_alloc created it, except that
+    // status is set to ENV_NOT_RUNNABLE, and the register set is copied
+    // from the current environment -- but tweaked so sys_exofork
+    // will appear to return 0.
+
+    // LAB 4: Your code here.
+    struct Env *new_env;
+    int r = env_alloc(&new_env, curenv->env_id);
+    if(r  < 0)
+        return r;
+    
+    new_env->env_status = ENV_NOT_RUNNABLE;
+    new_env->env_tf = curenv->env_tf;
+    new_env->env_tf.tf_regs.reg_eax = 0;
+
+    return new_env->env_id;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+\subsection{\large sys\_page\_alloc}
+sys\_page\_alloc()系统调用为用户提供申请物理页的接口，并映射到指定的
+虚拟地址位置。
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+sys_page_alloc(envid_t envid, void *va, int perm)
+{
+    ...
+    // LAB 4: Your code here.
+    struct Env *e;
+    int r = envid2env(envid, &e, 1);
+
+    // bad-env
+    if(r < 0)
+        return r;
+    
+    // va is not page-aligned or va >= UTOP
+    if((uintptr_t)va >= UTOP || (uintptr_t)va != ROUNDDOWN((uintptr_t)va, PGSIZE))
+        return -E_INVAL;
+
+    // perm inappropriate
+    if( 
+        !(perm & PTE_U) ||
+        !(perm & PTE_P) ||
+        ((perm | PTE_SYSCALL) != PTE_SYSCALL)
+        )
+        return -E_INVAL;
+
+    struct PageInfo *pp = page_alloc(0);
+    if(!pp)
+        return -E_NO_MEM;
+    r = page_insert(e->env_pgdir, pp, va, perm);
+    if(r < 0)
+    {
+        page_free(pp);
+        return r;
+    }
+
+    return 0;
+
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+\subsection{\large sys\_page\_map}
+sys\_page\_map() 系统调用用于将源进程srcva处映射的物理页映射到目的进程
+dstva处。需要注意的是若源进程中该物理页为read-only权限，在目的进程中也应保持其只读性。\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+sys_page_map(envid_t srcenvid, void *srcva,
+            envid_t dstenvid, void *dstva, int perm)
+{
+    // LAB 4: Your code here.
+    struct Env *srcE, *dstE;
+    // bad-env
+    if(envid2env(srcenvid, &srcE, 1) < 0 ||
+       envid2env(dstenvid, &dstE, 1) < 0)
+    { return -E_BAD_ENV; }
+    // va-error
+    if((uintptr_t)srcva >= UTOP || 
+       (uintptr_t)srcva != ROUNDDOWN((uintptr_t)srcva, PGSIZE) ||
+       (uintptr_t)dstva >= UTOP || (uintptr_t)dstva != ROUNDDOWN((uintptr_t)dstva, PGSIZE))
+    { return -E_INVAL; }
+    // perm inappropriate
+    if( 
+        !(perm & PTE_U) || !(perm & PTE_P) ||
+        ((perm | PTE_SYSCALL) != PTE_SYSCALL)
+    )
+    { return -E_INVAL; }
+
+    pte_t *srcPTE;
+    struct PageInfo *srcpp = page_lookup(srcE->env_pgdir, srcva, &srcPTE);
+    struct PageInfo *dstpp = page_alloc(0);
+
+    // write on read-only
+    if((perm & PTE_W) && !(*srcPTE & PTE_W))
+        return -E_INVAL;
+
+    // srcva not mapped
+    if(!srcpp)
+        return -E_INVAL;
+
+    // no memory
+    if(page_insert(dstE->env_pgdir, srcpp, dstva, perm) < 0)
+        return -E_NO_MEM;
+    return 0;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+\subsection{\large sys\_page\_unmap}
+sys\_page\_unmap()系统调用是解除va处的物理页映射，相当于对内核中
+page\_remove() 接口的用户态封装。\par 
+
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+sys_page_unmap(envid_t envid, void *va)
+{
+    // Hint: This function is a wrapper around page_remove().
+
+    // LAB 4: Your code here.
+    struct Env *e;
+    if(envid2env(envid, &e, 1) < 0)
+        return -E_BAD_ENV;
+    if((uintptr_t)va >= UTOP || (uintptr_t)va != ROUNDDOWN((uintptr_t)va, PGSIZE))
+        return -E_INVAL;
+    
+    page_remove(e->env_pgdir, va);
+    return 0;
+
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\subsection{\large sys\_env\_set\_status}
+sys\_env\_set\_status() 用于设置目标进程的运行状态（可运行/不可运行）：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+sys_env_set_status(envid_t envid, int status)
+{
+    // LAB 4: Your code here.
+    if(status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE)
+        return -E_INVAL;
+    struct Env *e;
+    int r = envid2env(envid, &e, 1);
+    if(r < 0)
+        // error happened
+        return r;
+    e->env_status = status;
+    // when go back to trap() who called this function,
+    // the sched_yield will be called
+    return 0;
+
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+完成上述函数实现后，修改syscall()函数的dispatch部分：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+int32_t
+syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
+{
+    // Call the function corresponding to the 'syscallno' parameter.
+    // Return any appropriate return value.
+    // LAB 3: Your code here.
+
+    // panic("syscall not implemented");
+
+    switch (syscallno) 
+    {
+        case SYS_cputs:
+            sys_cputs((char *)a1, a2);
+            return 0;
+        case SYS_cgetc:
+            return sys_cgetc();
+        case SYS_getenvid:
+            return sys_getenvid();
+        case SYS_env_destroy:
+            return sys_env_destroy(a1);
+        case SYS_yield:
+            sys_yield();
+            return 0;
+        case SYS_exofork:
+            return sys_exofork();
+        case SYS_env_set_status:
+            return sys_env_set_status(a1, a2);
+        case SYS_page_alloc:
+            return sys_page_alloc(a1, (void *)a2, a3);
+        case SYS_page_map:
+            return sys_page_map(a1, (void *)a2, a3, (void *)a4, a5);
+        case SYS_page_unmap:
+            return sys_page_unmap(a1, (void *)a2);
+        default:
+            return -E_INVAL;
+    }
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
 
 \end{document}
