@@ -1229,7 +1229,8 @@ page_fault_handler(struct Trapframe *tf)
 \setmainfont{Times New Roman}
 然后我们再根据实验要求，构建 user\_mem\_check 函数。该函数供 user\_mem\_assert 函数调用，
 用于检查用户态程序是否产生内存访问的问题。user\_mem\_assert 函数实现完成后供 syscall 的实际功能
-函数使用。根据实验提示，user\_mem\_check 函数实现如下：\par
+函数使用。根据实验提示，user\_mem\_check 函数实现如下（需非常小心此处的corner-case，做实验时在Lab4被
+坑过）：\par
 \newpage
 \lstset{style=CStyle}
 \setmainfont{Consolas}
@@ -1239,8 +1240,8 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
     // LAB 3: Your code here.
     uintptr_t va_start = (uintptr_t)ROUNDDOWN(va, PGSIZE);		// first-page
-    uintptr_t va_end = (uintptr_t)ROUNDDOWN(va+len, PGSIZE);	// last-page
-    for(uintptr_t pva = va_start; pva <= va_end; pva += PGSIZE)
+    uintptr_t va_end = (uintptr_t)ROUNDUP(va+len, PGSIZE);		// last-page-end
+    for(uintptr_t pva = va_start; pva < va_end; pva += PGSIZE)
     {
         pte_t *ppte;
         // struct PageInfo *ppage;
@@ -1248,7 +1249,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
         ppte = pgdir_walk(env->env_pgdir, (void *)pva, 0);
         if(!ppte || pva > ULIM || ((*ppte & perm) != perm))
         {
-            if(pva < (uintptr_t)va)
+            if(pva <= (uintptr_t)va)
                 user_mem_check_addr = (uintptr_t)va;
             else
                 user_mem_check_addr = pva;
@@ -1258,7 +1259,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
     }
 
     return 0;
-}    
+}
 \end{lstlisting}
 \setmainfont{Times New Roman}
 再检查当前需要调用 user\_mem\_assert 的函数sys\_cputs：\par 
