@@ -899,4 +899,411 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 \end{lstlisting}
 \setmainfont{Times New Roman}
 
+% ---- part B ----
+
+\chapter[\Large Copy-on-Write Fork]{Copy-on-Write Fork}
+本节实现 fork() 等用户态进程创建的相关调用。JOS在实现fork()调用的时候采用了与xv6不同的方法：
+对创建的子进程的地址空间复制采用copy-on-write的方法，即创建时子进程直接复制使用父进程的地址映射
+（而不复制内存空间内容本身），等到父子进程任一一方执行写操作引发page fault，再进行内存空间的复制。
+这样做的好处是在很多workload中，fork得到的子进程很快就会进行excute操作，而前面耗时复制的父进程地址空间
+内容并不起到什么作用；采用copy-on-write可以有效解决这里的性能问题。\par
+
+\section[\large User-level page fault handling]{User-level page fault handling}
+
+JOS 将 page fault 的处理逻辑交给用户态程序定义。用户态进程定义的handler可以使用JOS系统调用的方法来处理
+可能出现在该进程上的page fault。
+
+\subsection{Setting the Page Fault Handler}
+\exercise{8}{
+    \par 
+    {
+        Implement the sys\_env\_set\_pgfault\_upcall system call. 
+        Be sure to enable permission checking when looking up the environment ID of the target 
+        environment, since this is a "dangerous" system call.
+    } \par
+}
+这个练习要求我们实现设置 pgfault\_upcall 的函数。pgfault\_upcall 是对 page fault handler 的封装
+（详见后文Exercise 10），在执行真正的handler前完成必要的准备工作与善后工作。JOS为env结构体添加了存放
+upcall函数的指针，我们只需将用户态传递来的指针设置即可。\par
+（注：完成该系统调用同样需要修改syscall的dispatch部分，此处省略）
+\newpage
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+sys_env_set_pgfault_upcall(envid_t envid, void *func)
+{
+    // LAB 4: Your code here.
+    struct Env *e;
+    if(envid2env(envid, &e, 1) < 0)
+        return -E_BAD_ENV;
+    e->env_pgfault_upcall = func;
+
+    return 0;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\subsection{Normal and Exception Stacks in User Environments}
+在调用page fault handler时，JOS还涉及一次栈的切换。当用户态程序正常运行时，它会使用
+用户栈（即[USTACKTOP-PGSIZE, STACKTOP)区域）。当 page fault发生时，JOS将栈切换到地址空间
+中的用户异常栈（[UXSTACKTOP-PGSIZE, UXSTACKTOP)）。Hanlder在这个栈上处理page fault，通过
+JOS的系统调用执行为缺页提供新的物理页等方式解决page fault。最后Handler退出，用户态程序回到
+原有的用户栈处。
+\subsection{Invoking the User Page Fault Handler}
+与陷入trap时我们在内核栈上维护了Trapframe结构同理，当page fault发生时我们也在上述用户异常栈
+上维护一个UTrapframe结构保存发生page fault时的用户态程序现场。当handler结束调用后，我们可以利用
+保存的现场恢复原有用户态进程的运行。这一过程是由接管所有page fault trap处理的page\_fault\_handler()
+函数完成的：我们在Lab3中实现了对内核态page fault的处理（crash），本节我们需要按照上述想法实现用户态的处理。\par
+
+\subsection{Setting the Page Fault Handler}
+\exercise{9}{
+    \par 
+    {
+        Implement the code in page\_fault\_handler in kern/trap.c 
+        required to dispatch page faults to the user-mode handler. 
+        Be sure to take appropriate precautions 
+        when writing into the exception stack. 
+        (What happens if the user environment runs out of space on the exception stack?)
+    } \par
+}
+根据实验要求，我们完成代码如下：
+
+\newpage
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+page_fault_handler(struct Trapframe *tf)
+{
+    ...
+    // LAB 4: Your code here.
+    if(curenv->env_pgfault_upcall)
+	{
+		struct UTrapframe *utf;
+		// stacked page fault
+		if(UXSTACKTOP - PGSIZE <= tf->tf_esp && tf->tf_esp < UXSTACKTOP)
+			// remain a sratch space at the top
+			utf = (struct UTrapframe*)(tf->tf_esp - sizeof(struct UTrapframe) - 4);
+		// first page fault
+		else
+			utf = (struct UTrapframe*)(UXSTACKTOP - sizeof(struct UTrapframe));
+
+		// (1) didn't allocate a page for exception stack
+		// (2) exception stack overflows
+		// (3) can't write it
+		user_mem_assert(curenv, (void *)utf, sizeof(struct UTrapframe), PTE_W);
+
+		utf->utf_esp = tf->tf_esp;
+		utf->utf_eflags = tf->tf_eflags;
+		utf->utf_eip = tf->tf_eip;
+		utf->utf_regs = tf->tf_regs;
+		utf->utf_err = tf->tf_err;
+		utf->utf_fault_va = fault_va;
+		
+		tf->tf_esp = (uintptr_t)utf;
+		tf->tf_eip = (uintptr_t)(curenv->env_pgfault_upcall);
+		env_run(curenv);
+	}
+
+    // Destroy the environment that caused the fault.
+    cprintf("[%08x] user fault va %08x ip %08x\n",
+        curenv->env_id, fault_va, tf->tf_eip);
+    print_trapframe(tf);
+    env_destroy(curenv);
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+关于这部分代码，有几点需要说明：\par 
+首先是判断upcall函数是否存在（用户态程序是否正确设置handler），
+如不存在说明用户态程序没有准备处理page fault的程序，
+因此我们直接回收进程（根据实验提示，我们在进程回收前打印信息方便调试）。\par 
+第二，若upcall函数存在，则第一个要考虑的问题是构造UTrapframe的位置。
+我们检查Trapframe为我们提供的发生page fault时ESP的值：如果它已经位于用户异常栈
+中，则我们在当前栈中继续生长（根据实验提示，在栈上添加一个字长的空白区域）；否则，
+我们需要切换到用户异常栈栈顶处。需要注意的是，page\_fault\_handler并不负责用户异常栈
+内存的分配（从后续实验可知，这一步交给了用户自定义的handler完成）。\par 
+在确定UTrapframe放置位置后，我们填充该结构，并将Trapframe的EIP切换到upcall函数上再调度，
+返回用户态后，用户进程开始执行upcall函数。
+
+\subsection{User-mode Page Fault Entrypoint}
+\exercise{10}{
+    \par 
+    {
+        Implement the \_pgfault\_upcall routine in lib/pfentry.S. 
+        The interesting part is returning to the original point in the user code 
+        that caused the page fault. 
+        You'll return directly there, 
+        without going back through the kernel. 
+        The hard part is simultaneously switching stacks and re-loading the EIP.
+    } \par
+}
+在上一个Exercise中，我们在内核态中设置了用户异常栈、将执行流位置设置到upcall函数后
+返回到发生了page fault的用户态进程。因此，\underline{整个upcall函数都是运行在用户态下的}。
+如前文所述，upcall函数是对用户自定义page fault handler的一个封装：它的主要任务是在调用handler
+以后恢复进程现场，使进程重新恢复到触发page fault时的状态。根据实验提示，我们对它的实现如下：\par 
+\lstset{style=AssemblyStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+.text
+.globl _pgfault_upcall
+_pgfault_upcall:
+    // Call the C page fault handler.
+    pushl %esp			// function argument: pointer to UTF
+    movl _pgfault_handler, %eax
+    call *%eax
+    addl $4, %esp			// pop function argument
+
+    // LAB 4: Your code here.
+    movl 0x28(%esp), %eax	// take out the trap-time eip
+    subl $4, 0x30(%esp)     // page fault address
+    movl 0x30(%esp), %edx	// take out the trap-time esp
+    movl %eax, (%edx)       // push EIP into USER-STACK
+    addl $8, %esp
+    popal
+    addl $4, %esp
+    popfl
+    popl %esp
+    ret
+\end{lstlisting}
+\setmainfont{Times New Roman}
+\par 
+我们同样来理解一下\_pgfault\_upcall的实现。第一部分非我们实现的内容是对
+用户定义的handler的调用。我们在这个Exercise中实现的内容是现场的恢复。根据实验的提示，
+直接使用jmp指令进行跳转是不可行的：我们需要恢复所有的寄存器现场，如果使用jmp的话我们总是
+会需要再一个额外的、不需要恢复的寄存器来保存跳转地址，这会导致恢复的现场与实际现场不一致。
+根据实验的提示，我们采用ret指令来回到原来的状态。在Lab3时我们已经接触过，ret指令会将在栈上
+的EIP弹出并载入，从而使我们能够回到原初的状态。\par 
+我们的代码首先将用户栈和发生page fault时的EIP取出（均存在UTrapframe中），并将EIP放入用户栈中
+（注意需先将EIP地址减去4，才是发生page fault的正确地址）；之后我们跳过栈顶两个与寄存器现场恢复
+无关的值后，popal/popfl恢复现场。最后我们用popl将存放在异常栈栈顶的用户栈地址弹出，进程即成功
+切换到用户栈。此时用户栈栈顶存放着page fault发生地址，我们只需ret即可回到现场。\par
+\quad \par 
+\exercise{11}{
+    \par 
+    {
+        Finish set\_pgfault\_handler() in lib/pgfault.c.
+    } \par
+}
+最后我们要实现注册handler的用户library函数。该函数本身是用户态函数，
+因此所有与JOS的交互通过系统调用来执行。在函数第一次被调用时，我们使用
+系统调用为用户异常栈分配一个物理页并完成映射，同时将upcall函数设置为
+我们在上一个Exercise中实现的\_pgfault\_upcall。upcall函数会根据函数指针名
+找到\_pgfault\_handler并执行。\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+set_pgfault_handler(void (*handler)(struct UTrapframe *utf))
+{
+    int r;
+
+    if (_pgfault_handler == 0) 
+    {
+        // First time through!
+        // LAB 4: Your code here.
+        envid_t envid = sys_getenvid();
+        if(sys_page_alloc(envid, (void *)(UXSTACKTOP-PGSIZE), PTE_W | PTE_U | PTE_P) < 0)
+            panic("sys_page_alloc failed.");
+        if(sys_env_set_pgfault_upcall(envid, _pgfault_upcall) < 0)
+            panic("sys_env_set_pgfault_upcall failed.");
+    }
+
+    // Save handler pointer for assembly to call.
+    _pgfault_handler = handler;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+\section[\large Implementing Copy-on-Write Fork]{Implementing Copy-on-Write Fork}
+\exercise{12}{
+    \par 
+    {
+        Implement fork, duppage and pgfault in lib/fork.c.
+        Test your code with the forktree program. 
+        It should produce the following messages, with interspersed 'new env', 
+        'free env', and 'exiting gracefully' messages. 
+        The messages may not appear in this order, and the environment IDs may be different.
+    } \par
+}
+这一节中我们需要实现duppage，pgfault以及完整的fork函数，完成这一个Exercise后我们就可以在用户态创建新进程了。
+我们按照duppage，fork到pgfault的顺序实现上述函数。\par 
+
+\subsection{duppage}
+duppage()函数用于在指定的进程上完成对某个物理页的映射复制。其使用场景是父进程fork时调用该函数，
+将目标页映射复制到子进程VAS中，同时若该页原本为可写页，将父子进程的该映射都设置为copy-on-write模式。
+
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+duppage(envid_t envid, unsigned pn)
+{
+    // LAB 4: Your code here.
+    // map for child
+    if((uvpt[pn] & PTE_W) || (uvpt[pn] & PTE_COW))
+    {
+        int r = sys_page_map(0, (void *)(pn*PGSIZE),envid, (void *)(pn*PGSIZE), 
+                             PTE_COW | PTE_U | PTE_P);
+        if(r < 0)
+            return -1;
+        
+        // remap for thisenv
+        r = sys_page_map(0, (void *)(pn*PGSIZE), 0, (void *)(pn*PGSIZE),
+                         PTE_COW | PTE_U | PTE_P);
+        if(r < 0)
+            return -1;
+    }
+    else
+    {
+        int r = sys_page_map(0, (void *)(pn*PGSIZE), envid, (void *)(pn*PGSIZE),
+                             PTE_U | PTE_P);
+        if(r < 0)
+            return -1;
+    }
+    return 0;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+函数实现上有一个要注意的点：检查需要被dup的页的用户态权限时，用到了在env\_alloc阶段映射在
+VAS中的[UVPT, UVPT+PTSIZE)段：这个段映射了用户进程的页目录（见env\_setup\_vm()的实现）。
+JOS在entry.S中提供了两个变量：uvpt和uvpd。\par 
+
+\lstset{style=AssemblyStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+.globl uvpt
+.set uvpt, UVPT
+.globl uvpd
+.set uvpd, (UVPT+(UVPT>>12)*4)
+\end{lstlisting}
+\setmainfont{Times New Roman}
+\par 这里JOS使用了一个相当trick的方法：将页目录作为页表进行查询，
+从而得到页目录/页表自身。将UVPT段映射到页目录自身的物理地址后，x86对PDX与UVPT相同的段进行地址翻译时，根据对应的PDE找到自身，在第二步翻译时
+实际上是根据PTX对页目录进行搜索，根据PTX偏移量得到的正是对应页表的PTE。JOS定义了一个虚拟地址为UVPT的数组uvpt，作为页表访问入口。\par 
+如果需要访问页目录呢？在访问页表时首先需要确定页表是否存在，这是记录在PDE中的。实际访问逻辑与上述访问页表逻辑是相同的，只需将地址的PDX与PTX都
+设置为与UVPT的PDX段相同即可。JOS定义了数组uvpd，虚拟地址为(UVPT+(UVPT >> PGSHIFT)*4)。\par
+（注：页目录/页表与页的寻址方式不同：页目录与页表按照字（JOS中即4字节寻址），而物理页按照字节寻址。在定义uvpt和uvpd变量
+时将它们定义为了pte\_t和pde\_t数组，因此索引时得到实际地址应为uvpt/uvpd基址加上4*下标偏移量。对于uvpt，下标偏移量计算使用
+PGNUM(addr)，而对于uvpd则为PDX(addr)。）\par 
+
+\quad \par  
+{
+\centering
+\includegraphics[width=0.9\textwidth]{uvpt} \par
+}
+
+\newpage
+
+\subsection{fork}
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+envid_t
+fork(void)
+{
+    // LAB 4: Your code here.
+    set_pgfault_handler(pgfault);
+    envid_t newChildId = sys_exofork();
+    if(newChildId < 0)
+        return -1;
+    
+    // for child-process
+    if(newChildId == 0)
+    {
+        thisenv = envs + ENVX(sys_getenvid());
+        return 0;
+    }
+
+    // allocate a page for child-exception-stack
+    if(sys_page_alloc(newChildId, (void *)(UXSTACKTOP-PGSIZE), PTE_W | PTE_U | PTE_P) < 0)
+        return -1;
+    
+    // set child-pgfault-upcall
+    sys_env_set_pgfault_upcall(newChildId, (void *)_pgfault_upcall);
+
+    // copy the map into child
+    uintptr_t addr;
+    for(addr = 0; addr < USTACKTOP; addr += PGSIZE)
+        if((uvpd[PDX(addr)] & PTE_P) && (uvpt[PGNUM(addr)] & PTE_P))
+            duppage(newChildId, PGNUM(addr));
+
+    // set child to be runnable
+    if(sys_env_set_status(newChildId, ENV_RUNNABLE) < 0)
+        return -1;
+
+    return newChildId;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+fork实现时依次完成几件事：
+(1) 创建子进程（此时子进程仍未NOT\_RUNNABLE）；
+(2) 从子进程返回时修改thisenv后直接返回（这一步会在父进程昨晚所有处理、将子进程设置为RUNNABLE后才可能被调度执行）；
+(3) 为子进程分配独立的用户异常栈（不使用cow）；
+(4) 对所有VAS中的用户态内存进行cow-dup；
+(5) 将子进程设置为可被调度运行的状态后返回。
+\par 
+
+\newpage
+\subsection{pgfault}
+
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static void
+pgfault(struct UTrapframe *utf)
+{
+    void *addr = (void *) utf->utf_fault_va;
+    uint32_t err = utf->utf_err;
+    int r;
+
+    // Check that the faulting access was (1) a write, and (2) to a
+    // copy-on-write page.  If not, panic.
+    // Hint:
+    //   Use the read-only page table mappings at uvpt
+    //   (see <inc/memlayout.h>).
+
+    // LAB 4: Your code here.
+    if(!((uvpt[PGNUM(addr)] & PTE_COW) && (err & FEC_WR))
+    )
+    { panic("pgfault panic!"); }
+
+    // Allocate a new page, map it at a temporary location (PFTEMP),
+    // copy the data from the old page to the new page, then move the new
+    // page to the old page's address.
+    // Hint:
+    //   You should make three system calls.
+
+    // LAB 4: Your code here.
+    envid_t envId = sys_getenvid(); // Don't use curenv->env_id!
+    if(sys_page_alloc(envId, (void *)(PFTEMP), PTE_P | PTE_U | PTE_W) < 0)
+        panic("sys_page_alloc failed in pgfault().");
+
+    // memory-move
+    memmove((void *)PFTEMP, (void *)(ROUNDDOWN(addr, PGSIZE)), PGSIZE);
+
+    if(sys_page_map(
+        envId, (void *)(PFTEMP), 
+        envId, (void *)(ROUNDDOWN(addr, PGSIZE)),
+        PTE_P | PTE_W | PTE_U) < 0
+    )
+    { panic("sys_page_map failed in pgfault().");; }
+
+    if(sys_page_unmap(envId, (void *)(PFTEMP)) < 0)
+        panic("sys_page_unmap failed in pgfault().");
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+该函数即为默认的page fault处理函数。当发生的错误是对cow页进行写操作时，
+创建新的物理页，对原始页进行复制操作。这里借用了VAS中的临时区域PFTEMP作为临时
+位置，协助进行物理页内容的移动。
+
+
 \end{document}
