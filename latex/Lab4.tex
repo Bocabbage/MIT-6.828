@@ -137,7 +137,7 @@
 
 \title{MIT6.828 Lab4: Preemptive Multitasking}
 \author{Zhuofan Zhang}
-\date{April 2020}
+\date{April 2022}
 
 
 
@@ -1305,5 +1305,331 @@ pgfault(struct UTrapframe *utf)
 创建新的物理页，对原始页进行复制操作。这里借用了VAS中的临时区域PFTEMP作为临时
 位置，协助进行物理页内容的移动。
 
+\chapter[\Large Preemptive Multitasking and Inter-Process communication (IPC)]{Preemptive Multitasking and Inter-Process communication (IPC)}
+
+\section[\large Clock Interrupts and Preemption]{Clock Interrupts and Preemption}
+本节要求我们利用时钟中断实现抢断式的任务调度。在目前JOS的完成进度上，
+OS并没有任何主动手段可以从正在运行中的用户进程手中重新获取执行权，只能等待
+用户进程执行完后回收或调用 sys\_yield() 主动让渡出CPU。我们在这节实验中要
+实现抢占式调度，也即在每次时钟中断发生时，OS重新获得执行权并进行新一轮的进程调度
+（根据PartA内容，JOS执行Round-robin调度）。\par 
+在JOS中，处于内核态时会关闭外部中断，仅在用户进程执行时开启中断。外部中断由IRQs表示，
+其中IRQ 0为时钟中断。\par 
+
+\subsection{Interrupt discipline}
+
+\exercise{13}
+{
+    \par
+    {
+        Modify kern/trapentry.S and kern/trap.c to initialize 
+        the appropriate entries in the IDT and 
+        provide handlers for IRQs 0 through 15. 
+        Then modify the code in env\_alloc() in kern/env.c 
+        to ensure that user environments are always run 
+        with interrupts enabled.
+    }
+    \par
+    {
+        Also uncomment the sti instruction in sched\_halt() so that idle CPUs unmask interrupts.
+    }
+    \par
+    
+    {
+        The processor never pushes an error code when invoking 
+        a hardware interrupt handler. 
+        You might want to re-read section 9.2 of the 80386 
+        Reference Manual, 
+        or section 5.8 of the IA-32 Intel Architecture Software 
+        Developer's Manual, Volume 3, at this time.
+    }
+    \par 
+    {
+        After doing this exercise, 
+        if you run your kernel with any test program that runs 
+        for a non-trivial length of time (e.g., spin), 
+        you should see the kernel print trap frames for 
+        hardware interrupts. 
+        While interrupts are now enabled in the processor, 
+        JOS isn't yet handling them, 
+        so you should see it misattribute each interrupt 
+        to the currently running user environment and destroy it. 
+        Eventually it should run out of environments to destroy 
+        and drop into the monitor.
+    }
+    \par 
+}
+
+这节要为IRQs设置trap入口，与我们在Lab3中设置其他
+trap入口的方式是一样的。根据提示，IRQs均为无ErrorCode的模式，我们
+修改trapentry.S，增加对应的接口函数：\par 
+
+\lstset{style=AssemblyStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+/* Add in Lab4 */
+TRAPHANDLER_NOEC(IRQ_TIMER_HANDLER,    IRQ_OFFSET + IRQ_TIMER)
+TRAPHANDLER_NOEC(IRQ_KBD_HANDLER,      IRQ_OFFSET + IRQ_KBD)
+TRAPHANDLER_NOEC(IRQ_SERIAL_HANDLER,   IRQ_OFFSET + IRQ_SERIAL)
+TRAPHANDLER_NOEC(IRQ_SPURIOUS_HANDLER, IRQ_OFFSET + IRQ_SPURIOUS)
+TRAPHANDLER_NOEC(IRQ_IDE_HANDLER,      IRQ_OFFSET + IRQ_IDE)
+TRAPHANDLER_NOEC(IRQ_ERROR_HANDLER,    IRQ_OFFSET + IRQ_ERROR)
+\end{lstlisting}
+\setmainfont{Times New Roman}
+\par
+修改trap中设置IDT的部分的代码：\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+trap_init(void)
+{
+    extern struct Segdesc gdt[];
+    ...
+    // Add in Lab4
+    extern void IRQ_TIMER_HANDLER();
+    extern void IRQ_KBD_HANDLER();
+    extern void IRQ_SERIAL_HANDLER();
+    extern void IRQ_SPURIOUS_HANDLER();
+    extern void IRQ_IDE_HANDLER();
+    extern void IRQ_ERROR_HANDLER();
+    ...
+    // Add in Lab4
+    SETGATE(idt[IRQ_OFFSET + IRQ_TIMER], 0, GD_KT, IRQ_TIMER_HANDLER, 0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_KBD], 0, GD_KT, IRQ_KBD_HANDLER, 0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_SERIAL], 0, GD_KT, IRQ_SERIAL_HANDLER, 0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_SPURIOUS], 0, GD_KT, IRQ_SPURIOUS_HANDLER, 0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_IDE], 0, GD_KT, IRQ_IDE_HANDLER, 0);
+    SETGATE(idt[IRQ_OFFSET + IRQ_ERROR], 0, GD_KT, IRQ_ERROR_HANDLER, 0);
+    
+    ...
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+最后再根据提示修改sched\_halt()函数，增加打开中断的指令即可。
+
+\newpage
+\subsection{Handling Clock Interrupts}
+完成入口设置后，我们再实现时钟中断的handler，实现也比较简单：每次触发IRQ Timer时
+使JOS进行一次系统调度即可。\par 
+\exercise{14}
+{
+    \par 
+    {
+        Modify the kernel's trap\_dispatch() function 
+        so that it calls sched\_yield() to find and 
+        run a different environment whenever a clock interrupt takes place.
+    }
+    \par 
+    {
+        You should now be able to get the user/spin test to work: 
+        the parent environment should fork off the child, 
+        sys\_yield() to it a couple times but in each case 
+        regain control of the CPU after one time slice, 
+        and finally kill the child environment and 
+        terminate gracefully.
+    }
+    \par 
+}
+
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static void
+trap_dispatch(struct Trapframe *tf)
+{
+    ...
+    // Handle clock interrupts. Don't forget to acknowledge the
+    // interrupt using lapic_eoi() before calling the scheduler!
+    // LAB 4: Your code here.
+    if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER) {
+        lapic_eoi();
+        sched_yield();
+    }
+
+    ...
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\section[\large Inter-Process communication (IPC)]{Inter-Process communication (IPC)}
+这一节要求我们完成JOS的进程间通信功能。JOS为用户进程提供的进程通信方法由两个系统调用来实现：
+sys\_ipc\_try\_send与sys\_ipc\_recv。前者用于向某一envid指定的进程发送消息（方式是传递
+一个在当前进程中映射的虚拟地址，JOS找到它对应的物理页，并将其映射到指定进程的VAS中），后者
+用于将当前进程设置为接收信息的状态并挂起（挂起前指定接收到的物理页应当映射的VA），直到有
+任一进程向其通讯后再重新变为可调度状态。\par 
+JOS在user-lib中进一步封装了这两个API，得到：ipc\_send() 与 ipc\_recv()。用户可以直接使用
+这两个API进行通信（实例：user/sendpage.c）。\par 
+
+\newpage
+
+
+\exercise{15}
+{
+    \par 
+    {
+        Implement \underline{sys\_ipc\_recv} and \underline{sys\_ipc\_try\_send} in kern/syscall.c. 
+        Read the comments on both before implementing them, 
+        since they have to work together. 
+        When you call envid2env in these routines, 
+        you should set the checkperm flag to 0, 
+        meaning that any environment is allowed to 
+        send IPC messages to any other environment, 
+        and the kernel does no special permission 
+        checking other than verifying that the target envid is valid.
+    }
+    \par 
+    {
+        Then implement the ipc\_recv and ipc\_send functions in lib/ipc.c.
+    }
+    \par
+    {
+        Use the user/pingpong and user/primes functions to test your IPC mechanism. 
+        user/primes will generate for each prime number a new environment 
+        until JOS runs out of environments. 
+        You might find it interesting to read user/primes.c 
+        to see all the forking and IPC going on behind the scenes.
+    }
+    \par 
+}
+
+\subsection{sys\_ipc\_recv}
+该函数负责设置接受新页映射的VA。当设置完成后，进程将被挂起（即暂时不被调度），
+直到有某一进程向其通信并设置VA映射后，该进程才重新可调度。\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+sys_ipc_recv(void *dstva)
+{
+    // LAB 4: Your code here.	
+    if((uintptr_t)dstva < UTOP && (uintptr_t)dstva != ROUNDDOWN((uintptr_t)dstva, PGSIZE))
+        return -E_INVAL;
+        
+    curenv->env_status = ENV_NOT_RUNNABLE;
+    curenv->env_ipc_dstva = dstva;
+    curenv->env_ipc_recving = true;
+    sched_yield();
+    // should not come here
+    return 0;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+这里有一点需要注意：当调用sched\_yield()后，\underline{实际上进程再次被调用时不会返回该执行点处}
+（直接自系统调用处返回），因此在后续我们实现recv的恢复时，应当注意对返回状态的设置问题（见下文send
+函数的实现）。
+
+\newpage
+\subsection{sys\_ipc\_try\_send}
+send函数首先找到srcva处映射的物理页，检查其各flag位符合要求后，将该物理页
+映射到通信目标进程指定的dstva处，并将目标进程重新设置为可调度的。需要注意的是：
+此处有对目标进程trapFrame-eax寄存器设置的语句（EAX存放trap的返回值）。上文我们
+提到，当等待通信的进程再次被调度时，它会直接从系统调用返回，而在recv中我们还未能
+正确设置其返回值，因此我们需要在这一步完成对目标进程系统调用返回值的设置。\par 
+
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+static int
+sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
+{
+    // LAB 4: Your code here.
+    struct Env *dstEnv;
+    // Error1: No dst-env
+    if(envid2env(envid, &dstEnv, 0) < 0)
+        return -E_BAD_ENV;
+    // Error2: dst-env is not recving
+    if(!dstEnv->env_ipc_recving)
+        return -E_IPC_NOT_RECV;
+    // Error3: not page-aligned / not mapped / PTE_W for read-only page
+    struct PageInfo *pp;
+    pte_t *srcPte;
+    pp = page_lookup(curenv->env_pgdir, srcva, &srcPte);
+    if(
+        (uintptr_t)srcva < UTOP &&
+        ((uintptr_t)srcva != ROUNDDOWN((uintptr_t)srcva, PGSIZE) ||
+        !pp || ((perm & PTE_W) && !(*srcPte & PTE_W)) ||
+        !(perm & PTE_U) || !(perm & PTE_P) || (perm & (~PTE_SYSCALL)))
+    ){ return -E_INVAL; }
+
+    int r;
+    if(
+        (uintptr_t)srcva < UTOP && 
+        (r = page_insert(dstEnv->env_pgdir, pp, dstEnv->env_ipc_dstva, perm) < 0)
+    ){ return r; }
+
+    dstEnv->env_ipc_recving = false;
+    dstEnv->env_ipc_from = curenv->env_id;
+    dstEnv->env_ipc_value = value;
+    dstEnv->env_ipc_perm = perm;
+    dstEnv->env_status = ENV_RUNNABLE;
+    dstEnv->env_tf.tf_regs.reg_eax = 0;  // !
+    return 0;
+    
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+\subsection{ipc\_recv}
+该lib函数是对系统调用recv的一层封装。需要注意的点是：
+当指定的地址pg为0的时候，我们无法完成正确的通信，而且
+我们需要将这一点传达给send函数（忽略此次通信）。设置为0
+的地址并不能完成这一点。根据我们上面对两个系统调用的实现，
+我们可以将pg设置为边界值UTOP，这样系统调用将自然返回。\par 
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+int32_t
+ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
+{
+    // LAB 4: Your code here.
+    if(pg == NULL)
+        pg = (void *)UTOP;
+
+    int r = sys_ipc_recv(pg);
+    if(r < 0)
+    {
+        if(from_env_store)
+            *from_env_store = 0;
+        if(perm_store)
+            *perm_store = 0;
+        return r;
+    }
+    if(from_env_store)
+        *from_env_store = thisenv->env_ipc_from;
+    if(perm_store)
+        *perm_store = thisenv->env_ipc_perm;
+    
+    return thisenv->env_ipc_value;
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
+
+\newpage
+
+\subsection{ipc\_send}
+send函数的lib-version实现也是同理。（未解决：为什么使用while）
+\lstset{style=CStyle}
+\setmainfont{Consolas}
+\begin{lstlisting}
+void
+ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
+{
+    // LAB 4: Your code here.
+    if(pg == NULL)
+        pg = (void *)UTOP;
+
+    int r;
+    while((r = sys_ipc_try_send(to_env, val, pg, perm)) < 0)
+    {
+        if(r != -E_IPC_NOT_RECV)
+            panic("ipc_send error: sys_ipc_try_send failed.");
+        sys_yield();
+    }
+}
+\end{lstlisting}
+\setmainfont{Times New Roman}
 
 \end{document}

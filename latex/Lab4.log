@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  20 APR 2022 22:51
+This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.6.8)  25 APR 2022 19:44
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -817,6 +817,11 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <8> on input line 2.
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <6> on input line 2.
+
+Overfull \hbox (15.09566pt too wide) in paragraph at lines 24--24
+ [] [][][]\TU/TimesNewRoman(0)/b/n/17.28 Preemptive Multitasking and Inter-Process communication (IPC)[][] []  
+ []
+
 )
 \tf@toc=\write7
 \openout7 = `Lab4.toc'.
@@ -880,21 +885,25 @@ Overfull \hbox (10.65697pt too wide) in paragraph at lines 1172--1174
 File: ./pics/uvpt.png Graphic file (type bmp)
 <./pics/uvpt.png>
 [23] [24] [25] [26]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1309.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 1309.
+Chapter 3.
+[27
+
+] [28] [29] [30] [31] [32] [33]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 1635.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 1635.
  (./Lab4.aux)
-Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 1309.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 1309.
+Package atveryend Info: Empty hook `AtVeryEndDocument' on input line 1635.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 1635.
 Package rerunfilecheck Info: File `Lab4.out' has not changed.
-(rerunfilecheck)             Checksum: 2EB1184F985F5301CEEA68366C597EFD;1897.
+(rerunfilecheck)             Checksum: AF147E3D275E19A8065A21C8CBEC72C6;2718.
  ) 
 Here is how much of TeX's memory you used:
- 28542 strings out of 479284
- 590820 string characters out of 5879641
- 1232879 words of memory out of 5000000
- 45687 multiletter control sequences out of 15000+600000
+ 28646 strings out of 479284
+ 592791 string characters out of 5879641
+ 1232882 words of memory out of 5000000
+ 45791 multiletter control sequences out of 15000+600000
  536723 words of font info for 84 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
  59i,6n,120p,813b,1495s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on Lab4.pdf (28 pages).
+Output written on Lab4.pdf (35 pages).
