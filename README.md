@@ -90,7 +90,7 @@
   * [ ] HW9: Barrier
   * [ ] HW10: Big Files
   * [ ] HW11: Crash
-  * [ ] HW12: Mmap
+  * [x] HW12: Mmap
   * [ ] HW13: Exokernel Question
   * [ ] HW14: Biscuit Question
   * [ ] HW15: Ticket Lock Question
