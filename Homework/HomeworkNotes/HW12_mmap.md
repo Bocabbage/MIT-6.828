@@ -15,7 +15,11 @@ int munmap(void *start, size_t length);
 
 此时分配VAS的空间后，系统并没有马上分配物理内存，而是采用了Copy-On-Write的设计方法。对于文件的映射同样如此，也即会在写时分配物理页并将文件中内容搬动到物理页上。
 
-由此涉及到一个问题：利用mmap（flags & MAP_SHARED）进行进程间通讯时（IPC）会存在同步问题。根据mmap-manual，mmap并不保证在munmap前共享的内容会同步到文件中。Linux提供了一个手动写回的API ：*msync* 来解决这一问题。
+由此涉及到一个问题：利用mmap（flags & MAP_SHARED）进行进程间通讯时（IPC）是否会存在同步问题？实际上，在进行共享映射的时候，因为映射对象可以被文件名唯一确定，在另一进程中对同一文件同一区域的映射会被内核【映射到相同的物理内存区域】，两者的IPC均在内存区域同步，不涉及写回文件（磁盘）。根据mmap-manual，mmap并不保证在munmap前共享的内容会同步到文件中，而Linux提供了一个手动写回的API ：*msync* 来解决这一问题。
+
+<img src="../pics/hw12-sharedobj.png" alt="shared-obj" style="zoom:67%;" />
+
+
 
 而当 flags & MAP_ANONYMOUS 时，mmap将直接在VAS上分配一段空间，等到写时会分配一个实际物理页，从而达到了为进程提供内存分配的效果。【注：从C程序的移植性角度而言，实际用户程序分配内存还是会使用更上层的封装（如malloc）等API】
 
